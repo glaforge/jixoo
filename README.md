@@ -137,7 +137,7 @@ Include `jixoo64` in your project dependencies.
 ### Quickstart Example
 
 ```java
-import com.divoom.pixoo64.api.*;
+import io.github.glaforge.jixoo.api.*;
 
 import java.nio.file.Path;
 
@@ -173,7 +173,7 @@ public class PixooExample {
 ### Auto-Discovering Devices in Java
 
 ```java
-import com.divoom.pixoo64.discovery.PixooDevice;
+import io.github.glaforge.jixoo.discovery.PixooDevice;
 
 import java.time.Duration;
 import java.util.List;
