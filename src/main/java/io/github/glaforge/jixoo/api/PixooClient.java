@@ -30,7 +30,15 @@ import java.time.Duration;
 /**
  * Main interface for interacting with the Divoom Pixoo64 display.
  */
-public interface PixooClient {
+public interface PixooClient extends AutoCloseable {
+
+    /**
+     * Closes underlying network client resources.
+     */
+    @Override
+    default void close() {
+        // Default no-op
+    }
 
     /**
      * Creates a client connected to the given IP address with default settings.

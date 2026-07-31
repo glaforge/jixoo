@@ -19,8 +19,10 @@ import io.github.glaforge.jixoo.cli.PixooCli;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
+import picocli.CommandLine.Spec;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -46,8 +48,8 @@ public class RawCommand implements Callable<Integer> {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    @picocli.CommandLine.Spec
-    private picocli.CommandLine.Model.CommandSpec spec;
+    @Spec
+    private CommandSpec spec;
 
     @ParentCommand
     private PixooCli parent;

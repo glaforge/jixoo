@@ -48,16 +48,16 @@ public final class RawRgbBuffer {
             );
         }
 
+        int[] argbPixels = new int[WIDTH * HEIGHT];
+        image.getRGB(0, 0, WIDTH, HEIGHT, argbPixels, 0, WIDTH);
+
         byte[] rawRgb = new byte[TOTAL_BYTES];
         int index = 0;
 
-        for (int y = 0; y < HEIGHT; y++) {
-            for (int x = 0; x < WIDTH; x++) {
-                int argb = image.getRGB(x, y);
-                rawRgb[index++] = (byte) ((argb >> 16) & 0xFF); // Red
-                rawRgb[index++] = (byte) ((argb >> 8) & 0xFF);  // Green
-                rawRgb[index++] = (byte) (argb & 0xFF);         // Blue
-            }
+        for (int argb : argbPixels) {
+            rawRgb[index++] = (byte) ((argb >> 16) & 0xFF); // Red
+            rawRgb[index++] = (byte) ((argb >> 8) & 0xFF);  // Green
+            rawRgb[index++] = (byte) (argb & 0xFF);         // Blue
         }
 
         return rawRgb;

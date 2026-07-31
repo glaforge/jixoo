@@ -17,6 +17,12 @@ package io.github.glaforge.jixoo.example;
 
 import io.github.glaforge.jixoo.api.PixooClient;
 import io.github.glaforge.jixoo.api.PixooText;
+import io.github.glaforge.jixoo.model.PixooAnimation;
+import io.github.glaforge.jixoo.model.PixooFrame;
+import io.github.glaforge.jixoo.model.RawRgbBuffer;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ShowHelloApp {
 
@@ -40,10 +46,10 @@ public class ShowHelloApp {
             // and give us a clean background to draw the native text on.
             // We set the duration to 60,000ms (60 seconds) so the device doesn't instantly 
             // revert back to the cloud gallery before we can see the text.
-            java.util.List<io.github.glaforge.jixoo.model.PixooFrame> frames = new java.util.ArrayList<>();
-            byte[] blackPixels = new byte[io.github.glaforge.jixoo.model.RawRgbBuffer.TOTAL_BYTES];
-            frames.add(new io.github.glaforge.jixoo.model.PixooFrame(blackPixels, 60000));
-            io.github.glaforge.jixoo.model.PixooAnimation background = new io.github.glaforge.jixoo.model.PixooAnimation(frames);
+            List<PixooFrame> frames = new ArrayList<>();
+            byte[] blackPixels = new byte[RawRgbBuffer.TOTAL_BYTES];
+            frames.add(new PixooFrame(blackPixels, 60000));
+            PixooAnimation background = new PixooAnimation(frames);
             
             client.sendAnimation(background);
 

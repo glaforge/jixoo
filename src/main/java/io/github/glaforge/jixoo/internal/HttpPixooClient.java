@@ -89,8 +89,18 @@ public class HttpPixooClient implements PixooClient {
 
         } catch (PixooException e) {
             throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new PixooException("Command execution interrupted: " + command.command(), e);
         } catch (Exception e) {
             throw new PixooException("Failed to execute command: " + command.command(), e);
+        }
+    }
+
+    @Override
+    public void close() {
+        if (httpClient != null) {
+            httpClient.close();
         }
     }
 

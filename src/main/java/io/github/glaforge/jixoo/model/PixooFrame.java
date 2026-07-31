@@ -16,6 +16,7 @@
 package io.github.glaforge.jixoo.model;
 
 import java.awt.image.BufferedImage;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Objects;
 
@@ -40,6 +41,29 @@ public record PixooFrame(byte[] rgbData, int delayMs) {
         if (delayMs < 0) {
             throw new IllegalArgumentException("Frame delay cannot be negative");
         }
+        rgbData = rgbData.clone();
+    }
+
+    @Override
+    public byte[] rgbData() {
+        return rgbData.clone();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof PixooFrame that)) return false;
+        return delayMs == that.delayMs && Arrays.equals(rgbData, that.rgbData);
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 * Arrays.hashCode(rgbData) + Integer.hashCode(delayMs);
+    }
+
+    @Override
+    public String toString() {
+        return "PixooFrame[delayMs=" + delayMs + ", rgbBytes=" + rgbData.length + "]";
     }
 
     /**

@@ -17,7 +17,9 @@ package io.github.glaforge.jixoo.cli.command;
 
 import io.github.glaforge.jixoo.discovery.PixooDevice;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.Spec;
 
 import java.time.Duration;
 import java.util.List;
@@ -35,8 +37,8 @@ public class DiscoverCommand implements Callable<Integer> {
     @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
     private boolean helpRequested;
 
-    @picocli.CommandLine.Spec
-    private picocli.CommandLine.Model.CommandSpec spec;
+    @Spec
+    private CommandSpec spec;
 
     @Option(
             names = {"-t", "--timeout"},

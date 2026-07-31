@@ -55,11 +55,12 @@ public record PixooDevice(
     public static List<PixooDevice> discoverDevices(Duration timeout) {
         List<PixooDevice> devices = new ArrayList<>();
         int[] discoveryPorts = {5000, 7000, 3333};
+        long perPortTimeoutMs = Math.max(50, timeout.toMillis() / discoveryPorts.length);
 
         for (int port : discoveryPorts) {
             try (DatagramSocket socket = new DatagramSocket()) {
                 socket.setBroadcast(true);
-                socket.setSoTimeout((int) timeout.toMillis());
+                socket.setSoTimeout((int) perPortTimeoutMs);
 
                 byte[] sendData = "DISCOVER".getBytes(StandardCharsets.UTF_8);
                 InetAddress broadcastAddress = InetAddress.getByName("255.255.255.255");
@@ -68,7 +69,7 @@ public record PixooDevice(
                 socket.send(sendPacket);
 
                 byte[] receiveBuf = new byte[2048];
-                long endTime = System.currentTimeMillis() + timeout.toMillis();
+                long endTime = System.currentTimeMillis() + perPortTimeoutMs;
 
                 while (System.currentTimeMillis() < endTime) {
                     try {

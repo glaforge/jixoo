@@ -28,6 +28,7 @@ public record PixooAnimation(List<PixooFrame> frames) {
 
     public PixooAnimation {
         Objects.requireNonNull(frames, "frames list cannot be null");
+        frames = List.copyOf(frames);
         if (frames.isEmpty()) {
             throw new IllegalArgumentException("PixooAnimation must contain at least one frame");
         }

@@ -57,24 +57,27 @@ public class GifDecoder {
                     throw new PixooException("No GIF reader available in javax.imageio");
                 }
                 ImageReader reader = readers.next();
-                reader.setInput(iis);
+                try {
+                    reader.setInput(iis);
 
-                int numFrames = reader.getNumImages(true);
-                List<PixooFrame> frames = new ArrayList<>();
+                    int numFrames = reader.getNumImages(true);
+                    List<PixooFrame> frames = new ArrayList<>();
 
-                for (int i = 0; i < numFrames; i++) {
-                    BufferedImage rawFrame = reader.read(i);
-                    int delayMs = getFrameDelayMs(reader, i);
-                    if (delayMs <= 0) {
-                        delayMs = 100; // Default to 100ms if not specified or 0
+                    for (int i = 0; i < numFrames; i++) {
+                        BufferedImage rawFrame = reader.read(i);
+                        int delayMs = getFrameDelayMs(reader, i);
+                        if (delayMs <= 0) {
+                            delayMs = 100; // Default to 100ms if not specified or 0
+                        }
+
+                        BufferedImage processed = ImageProcessor.resizeAndFit(rawFrame);
+                        frames.add(PixooFrame.fromImage(processed, delayMs));
                     }
 
-                    BufferedImage processed = ImageProcessor.resizeAndFit(rawFrame);
-                    frames.add(PixooFrame.fromImage(processed, delayMs));
+                    return new PixooAnimation(frames);
+                } finally {
+                    reader.dispose();
                 }
-
-                reader.dispose();
-                return new PixooAnimation(frames);
             }
         } catch (PixooException e) {
             throw e;

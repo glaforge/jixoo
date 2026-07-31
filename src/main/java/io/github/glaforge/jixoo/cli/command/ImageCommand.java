@@ -19,9 +19,11 @@ import io.github.glaforge.jixoo.api.PixooClient;
 import io.github.glaforge.jixoo.api.PixooResponse;
 import io.github.glaforge.jixoo.cli.PixooCli;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.ParentCommand;
+import picocli.CommandLine.Spec;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,8 +42,8 @@ public class ImageCommand implements Callable<Integer> {
     @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
     private boolean helpRequested;
 
-    @picocli.CommandLine.Spec
-    private picocli.CommandLine.Model.CommandSpec spec;
+    @Spec
+    private CommandSpec spec;
 
     @ParentCommand
     private PixooCli parent;

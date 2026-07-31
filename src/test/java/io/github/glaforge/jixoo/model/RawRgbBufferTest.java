@@ -19,7 +19,9 @@ import org.junit.jupiter.api.Test;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -67,5 +69,45 @@ class RawRgbBufferTest {
         assertNotNull(base64);
         byte[] decoded = Base64.getDecoder().decode(base64);
         assertArrayEquals(dummyBytes, decoded);
+    }
+
+    @Test
+    void testPixooFrameEqualityAndDefensiveCopying() {
+        byte[] bytes1 = new byte[12288];
+        bytes1[0] = (byte) 0xAB;
+        byte[] bytes2 = new byte[12288];
+        bytes2[0] = (byte) 0xAB;
+
+        PixooFrame frame1 = new PixooFrame(bytes1, 100);
+        PixooFrame frame2 = new PixooFrame(bytes2, 100);
+
+        assertEquals(frame1, frame2);
+        assertEquals(frame1.hashCode(), frame2.hashCode());
+        assertTrue(frame1.toString().contains("delayMs=100"));
+
+        // Verify defensive cloning on constructor input
+        bytes1[0] = (byte) 0xFF;
+        assertEquals((byte) 0xAB, frame1.rgbData()[0]);
+
+        // Verify defensive cloning on accessor output
+        byte[] accessed = frame1.rgbData();
+        accessed[0] = (byte) 0x00;
+        assertEquals((byte) 0xAB, frame1.rgbData()[0]);
+    }
+
+    @Test
+    void testPixooAnimationUnmodifiableList() {
+        byte[] bytes = new byte[12288];
+        PixooFrame frame = new PixooFrame(bytes, 100);
+        List<PixooFrame> mutableList = new ArrayList<>();
+        mutableList.add(frame);
+
+        PixooAnimation animation = new PixooAnimation(mutableList);
+        assertEquals(1, animation.frameCount());
+
+        assertThrows(UnsupportedOperationException.class, () -> animation.frames().add(frame));
+
+        mutableList.add(frame);
+        assertEquals(1, animation.frameCount());
     }
 }

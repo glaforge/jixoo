@@ -15,6 +15,7 @@
  */
 package io.github.glaforge.jixoo.example;
 
+import io.github.glaforge.jixoo.api.PixooChannel;
 import io.github.glaforge.jixoo.api.PixooClient;
 import io.github.glaforge.jixoo.api.PixooResponse;
 import io.github.glaforge.jixoo.discovery.PixooDevice;
@@ -139,7 +140,7 @@ public class NetworkScannerApp {
                         .autoSwitchToCustomChannel(false)
                         .build();
 
-                PixooResponse response = client.selectChannel(io.github.glaforge.jixoo.api.PixooChannel.CUSTOM);
+                PixooResponse response = client.selectChannel(PixooChannel.CUSTOM);
                 if (response != null && response.isSuccess()) {
                     return ip + (port != 80 ? ":" + port : "");
                 }
