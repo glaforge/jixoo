@@ -8,7 +8,7 @@ This guide covers how to use Google's Gemini AI models to generate content and d
 
 Before running the examples in this guide, ensure you have the following installed and configured on your system:
 
-1. **`pixoo-cli`**: The native executable binary (`pixoo-cli` on macOS/Linux or `pixoo-cli.exe` on Windows). You can download the pre-compiled releases for your operating system from the [GitHub Releases page](https://github.com/divoom/jixoo64/releases).
+1. **`pixoo-cli`**: The native executable binary (`pixoo-cli` on macOS/Linux or `pixoo-cli.exe` on Windows). You can download the pre-compiled releases for your operating system from the [GitHub Releases page](https://github.com/glaforge/jixoo/releases).
 2. **`curl`**: Used to make HTTP requests to the Gemini API.
 3. **`ffmpeg`**: Required to stitch images into GIFs or convert video files to high-quality pixel art animations.
 4. **`python3`**: Used in some examples to parse JSON responses from the Gemini API.

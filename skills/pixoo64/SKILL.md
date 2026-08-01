@@ -9,6 +9,7 @@ compatibility: Requires pixoo-cli to be installed and available in the system PA
 
 This skill allows you to control and display content on Divoom Pixoo 64 LED matrix devices.
 It relies on the `pixoo-cli` command-line tool, which must be installed on the user's system.
+If the user does not have it installed, you can download the pre-compiled binary for their OS from the [GitHub Releases page](https://github.com/glaforge/jixoo/releases), or advise them to install it.
 
 ## 1. Controlling the Device
 
