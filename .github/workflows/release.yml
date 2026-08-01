@@ -15,14 +15,14 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: pixoo64
-            asset_name: pixoo64-linux-amd64
+            artifact_name: pixoo-cli
+            asset_name: pixoo-cli-linux-amd64.zip
           - os: macos-14
-            artifact_name: pixoo64
-            asset_name: pixoo64-macos-aarch64
+            artifact_name: pixoo-cli
+            asset_name: pixoo-cli-macos-aarch64.zip
           - os: windows-latest
-            artifact_name: pixoo64.exe
-            asset_name: pixoo64-windows-amd64.exe
+            artifact_name: pixoo-cli.exe
+            asset_name: pixoo-cli-windows-amd64.zip
 
     steps:
       - name: Checkout code
@@ -51,12 +51,12 @@ jobs:
         run: mvn -B -Pnative native:compile
         shell: bash
 
-      - name: Rename Artifact (Linux/macOS)
-        run: mv target/${{ matrix.artifact_name }} target/${{ matrix.asset_name }}
+      - name: Zip Artifact (Linux/macOS)
+        run: zip -j target/${{ matrix.asset_name }} target/${{ matrix.artifact_name }}
         if: runner.os != 'Windows'
 
-      - name: Rename Artifact (Windows)
-        run: move target\${{ matrix.artifact_name }} target\${{ matrix.asset_name }}
+      - name: Zip Artifact (Windows)
+        run: Compress-Archive -Path target\${{ matrix.artifact_name }} -DestinationPath target\${{ matrix.asset_name }}
         if: runner.os == 'Windows'
 
       - name: Upload Release Asset
