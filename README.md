@@ -50,6 +50,19 @@ mvn package -Pnative -DskipTests
 The standalone native binary will be generated at:
 `./target/pixoo64`
 
+### Releasing Native Binaries
+
+This project uses a GitHub Actions workflow to automatically build and publish native binaries for Linux, macOS (Apple Silicon), and Windows. 
+
+To trigger a new release, create a Git tag starting with `v` (e.g., `v1.0.0`) and push it to GitHub:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The CI pipeline will automatically extract the version from the tag, compile the native executables via GraalVM, and attach them to a new GitHub Release on the repository.
+
 ---
 
 ## CLI Usage (`pixoo64`)

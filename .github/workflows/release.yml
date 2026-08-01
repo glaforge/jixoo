@@ -1,0 +1,63 @@
+name: Release Native Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: pixoo64
+            asset_name: pixoo64-linux-amd64
+          - os: macos-14
+            artifact_name: pixoo64
+            asset_name: pixoo64-macos-aarch64
+          - os: windows-latest
+            artifact_name: pixoo64.exe
+            asset_name: pixoo64-windows-amd64.exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/v}"
+          echo "VERSION=$TAG_NAME" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Set up Java 21 and GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: 'maven'
+
+      - name: Update Maven version
+        run: mvn -B versions:set -DnewVersion=${{ env.VERSION }} -DgenerateBackupPoms=false
+
+      - name: Build Native Image
+        run: mvn -B -Pnative native:compile
+
+      - name: Rename Artifact (Linux/macOS)
+        run: mv target/${{ matrix.artifact_name }} target/${{ matrix.asset_name }}
+        if: runner.os != 'Windows'
+
+      - name: Rename Artifact (Windows)
+        run: move target\${{ matrix.artifact_name }} target\${{ matrix.asset_name }}
+        if: runner.os == 'Windows'
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/${{ matrix.asset_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
