@@ -42,10 +42,12 @@ jobs:
           cache: 'maven'
 
       - name: Update Maven version
-        run: mvn -B versions:set -DnewVersion=${{ env.VERSION }} -DgenerateBackupPoms=false
+        run: mvn -B versions:set "-DnewVersion=${{ env.VERSION }}" -DgenerateBackupPoms=false
+        shell: bash
 
       - name: Build Native Image
         run: mvn -B -Pnative native:compile
+        shell: bash
 
       - name: Rename Artifact (Linux/macOS)
         run: mv target/${{ matrix.artifact_name }} target/${{ matrix.asset_name }}
