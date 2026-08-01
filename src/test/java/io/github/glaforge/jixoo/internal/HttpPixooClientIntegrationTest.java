@@ -110,20 +110,21 @@ class HttpPixooClientIntegrationTest {
         assertTrue(response.isSuccess());
 
         synchronized (receivedRequests) {
-            // Expected sequence (pre-load frames to HTTP buffer first, then switch channel to prevent flickering):
-            // 1. Draw/ResetHttpGifId
-            // 2. Draw/SendHttpGif (frame 0)
-            // 3. Draw/SendHttpGif (frame 1)
-            // 4. Channel/SetIndex (3)
-            assertEquals(4, receivedRequests.size());
-            assertTrue(receivedRequests.get(0).contains("Draw/ResetHttpGifId"));
-            assertTrue(receivedRequests.get(1).contains("Draw/SendHttpGif"));
-            assertTrue(receivedRequests.get(1).contains("\"PicNum\":2"));
-            assertTrue(receivedRequests.get(1).contains("\"PicOffset\":0"));
-            assertTrue(receivedRequests.get(2).contains("Draw/SendHttpGif"));
-            assertTrue(receivedRequests.get(2).contains("\"PicNum\":2"));
-            assertTrue(receivedRequests.get(2).contains("\"PicOffset\":1"));
-            assertTrue(receivedRequests.get(3).contains("Channel/SetIndex"));
+            // 1. Channel/GetAllConf (from getLightSwitch)
+            // 2. Channel/SetIndex (3)
+            // 3. Draw/ResetHttpGifId
+            // 4. Draw/SendHttpGif (frame 0)
+            // 5. Draw/SendHttpGif (frame 1)
+            assertEquals(5, receivedRequests.size());
+            assertTrue(receivedRequests.get(0).contains("Channel/GetAllConf"));
+            assertTrue(receivedRequests.get(1).contains("Channel/SetIndex"));
+            assertTrue(receivedRequests.get(2).contains("Draw/ResetHttpGifId"));
+            assertTrue(receivedRequests.get(3).contains("Draw/SendHttpGif"));
+            assertTrue(receivedRequests.get(3).contains("\"PicNum\":2"));
+            assertTrue(receivedRequests.get(3).contains("\"PicOffset\":0"));
+            assertTrue(receivedRequests.get(4).contains("Draw/SendHttpGif"));
+            assertTrue(receivedRequests.get(4).contains("\"PicNum\":2"));
+            assertTrue(receivedRequests.get(4).contains("\"PicOffset\":1"));
         }
     }
 
