@@ -6,7 +6,7 @@
 
     <groupId>io.github.glaforge.jixoo</groupId>
     <artifactId>jixoo64</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
     <name>jixoo64</name>
     <description>Modern Java 21 library to interact with Divoom Pixoo64 LED Matrix display</description>
 
