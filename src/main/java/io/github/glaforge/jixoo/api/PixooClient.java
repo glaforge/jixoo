@@ -261,7 +261,7 @@ public interface PixooClient extends AutoCloseable {
         private int port = 80;
         private Duration connectTimeout = Duration.ofSeconds(5);
         private Duration requestTimeout = Duration.ofSeconds(5);
-        private boolean autoSwitchToCustomChannel = true;
+        private boolean autoSwitchToCustomChannel = false;
 
         /** Creates a new Builder instance. */
         Builder() {}

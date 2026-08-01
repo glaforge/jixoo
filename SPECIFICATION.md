@@ -17,8 +17,9 @@ The Divoom Pixoo 64 communicates over local Wi-Fi via an embedded HTTP server (t
 * **Content-Type:** `application/json; charset=utf-8`
 
 > [!IMPORTANT]
-> **HTTP/1.1 Enforcement Constraint:**
-> The ESP32 embedded web server on the Pixoo 64 does not support HTTP/2 upgrades or ALPN negotiations. Modern HTTP clients (such as Java 21 `HttpClient`) that default to HTTP/2 will receive an **`HTTP 400 Bad Request`** error from the device. All client implementations **must explicitly force HTTP/1.1**.
+> **HTTP/1.1 Enforcement & JSON Key Order Constraints:**
+> 1. The ESP32 embedded web server on the Pixoo 64 does not support HTTP/2 upgrades or ALPN negotiations. Modern HTTP clients (such as Java 21 `HttpClient`) that default to HTTP/2 will receive an **`HTTP 400 Bad Request`** error from the device. All client implementations **must explicitly force HTTP/1.1**.
+> 2. The Pixoo 64 firmware uses a lightweight C JSON parser (such as cJSON) that expects the `"Command"` key to be the **very first field** in the JSON request payload. Placing `"Command"` after large payload fields (e.g. after a 16KB Base64 `PicData` string) will cause parsing failures or silent command drops. All commands must serialize `@JsonPropertyOrder({"Command", ...})` first.
 
 ---
 
@@ -206,7 +207,7 @@ Toggles the screen backlight/LED display state.
 ```
 
 #### Field Specifications
-* `OnOff`: `1` for ON, `0` for OFF.
+* `OnOff`: `0` for ON, `1` for OFF (standby). Note that `0` enables the screen matrix, while `1` deactivates it.
 
 ---
 
@@ -280,7 +281,7 @@ Fetches the device's complete hardware and user configuration state.
 
 #### Response Fields (Partial List)
 * `Brightness`: Current LED brightness (`0` to `100`).
-* `LightSwitch`: Screen power state (`1` for ON, `0` for OFF).
+* `LightSwitch`: Screen power state (`0` for ON, `1` for OFF / standby).
 * `RotationFlag`: Current screen rotation setting.
 * `Mac`: Device MAC address.
 * `CurClockId`: The `ClockId` of the currently configured Faces clock.
@@ -313,6 +314,12 @@ The Pixoo 64 can be discovered on a local area network using two primary methods
 3. **HTTP Local Graphics Alternative:**
    Because firmware text overlays can interact unpredictably with active cloud channels, clients can render text locally onto a 64x64 bitmap in memory (e.g., via `java.awt.Graphics2D`) and send the resulting 12,288-byte RGB frame using `Draw/SendHttpGif`.
 
-4. **Custom Channel Screen Flicker (The "Screen State Hack"):**
-   The device actively ignores incoming `Draw/SendHttpGif` frames unless it is already switched to the Custom channel (`Channel/SetIndex: 3`). However, switching to the Custom channel *before* uploading the frames causes the screen to briefly flash whatever old frames were previously in the custom buffer.
-   - **The Fix:** You must wrap the channel switch and frame upload in a screen toggle. First, read `LightSwitch` from `Channel/GetAllConf`. If the screen is ON, send `Channel/OnOffScreen: 0` to turn it off instantly (bypassing the slow hardware fade of `SetBrightness`). Wait ~250ms for the matrix to deactivate. Switch to the Custom channel (`Channel/SetIndex: 3`). Send your GIF frames. Wait another ~250ms for the device's internal display loop to register the new frames, and finally turn the screen back ON (`Channel/OnOffScreen: 1`).
+4. **Custom Channel vs HTTP Buffer (`Channel/SetIndex: 3`):**
+   Calling `Channel/SetIndex: 3` switches the device to its internal **Divoom App Custom Gallery preset** stored in flash memory. If no custom gallery is configured via the Divoom mobile app, switching to index `3` results in a **black screen**. 
+   - **The Fix:** Client applications drawing via `Draw/SendHttpGif` or `Draw/SendHttpText` should NOT automatically switch to channel `3` (`autoSwitchToCustomChannel = false`), as HTTP drawing commands render directly on top of the active display buffer without requiring a channel switch.
+
+5. **Frame Pacing & Rate Limiting for `Draw/SendHttpGif`:**
+   Because each 64x64 RGB frame is ~16KB in Base64 JSON, bursting dozens of frame payloads as fast as possible will overwhelm the embedded ESP32 web server buffer. This leads to TCP packet truncation and the device returning `"Request data illegal json"`. Client implementations **must introduce a short delay (e.g. 20ms to 30ms)** between successive HTTP POST frame uploads.
+
+6. **Maximum HTTP GIF Frame Capacity:**
+   The internal memory buffer for HTTP GIF animations on the Pixoo 64 is capped at **~60 frames**. Uploading animations with more than 60 frames can result in memory overruns and command rejections (`"Request data illegal json"`). Longer videos should be downsampled (e.g. to 5-10 fps) or split into segments before transmission.

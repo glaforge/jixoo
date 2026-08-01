@@ -9,15 +9,21 @@ This guide covers how to use Google's Gemini AI models to generate content and d
 You can generate 1:1 aspect ratio images using the Gemini Image generation models and display them directly on your Pixoo. 
 
 ### Step 1: Generate the Image
-Use the Gemini Image API to generate a square image.
+Use the Gemini Image API to generate a square image. We use `gemini-3.1-flash-image` (also known as Nano Banana 2).
 
 ```bash
-curl -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$GEMINI_API_KEY" \
+curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?key=$GEMINI_API_KEY" \
 -H 'Content-Type: application/json' \
 -d '{
+  "model": "models/gemini-3.1-flash-image",
   "contents": [{
+    "role": "user",
     "parts": [{"text": "A pixel art 64x64 style image of a cyberpunk city at night."}]
-  }]
+  }],
+  "response_format": {
+    "type": "image",
+    "aspect_ratio": "1:1"
+  }
 }'
 ```
 *(Note: Extract the Base64 output from the response and save it as `image.png`)*

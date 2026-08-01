@@ -16,6 +16,7 @@
 package io.github.glaforge.jixoo.model.command;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 /**
  * Sealed interface representing all supported JSON control commands sent to Pixoo64.
@@ -66,6 +67,7 @@ public sealed interface PixooCommand permits
     }
 
     /** Command to send a frame of a GIF animation. */
+    @JsonPropertyOrder({"Command", "PicNum", "PicWidth", "PicOffset", "PicID", "PicSpeed", "PicData"})
     record SendGifCommand(
             @JsonProperty("PicNum") int picNum,
             @JsonProperty("PicWidth") int picWidth,

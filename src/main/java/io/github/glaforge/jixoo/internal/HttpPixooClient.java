@@ -148,8 +148,8 @@ public class HttpPixooClient implements PixooClient {
         if (!autoSwitchToCustomChannel) return -1;
         
         int lightSwitch = getLightSwitch();
-        if (lightSwitch == 1) {
-            executeCommand(new PixooCommand.ScreenStateCommand(0));
+        if (lightSwitch == 1) { // 1 means screen is OFF
+            setScreenState(true); // turn screen ON
             try { Thread.sleep(250); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
         selectChannel(PixooChannel.CUSTOM);
@@ -157,9 +157,7 @@ public class HttpPixooClient implements PixooClient {
     }
 
     private void restoreScreen(int lightSwitch) {
-        if (lightSwitch == 1) {
-            executeCommand(new PixooCommand.ScreenStateCommand(1));
-        }
+        // Do not issue Channel/OnOffScreen after uploading, as it wipes the HTTP buffer.
     }
 
     @Override
@@ -188,6 +186,7 @@ public class HttpPixooClient implements PixooClient {
                 log.warn("Frame {} of {} failed with error code {}", i, totalFrames, lastResponse.errorCode());
                 break;
             }
+            try { Thread.sleep(30); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
 
         try { Thread.sleep(250); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
@@ -237,7 +236,7 @@ public class HttpPixooClient implements PixooClient {
 
     @Override
     public PixooResponse setScreenState(boolean on) {
-        return executeCommand(new PixooCommand.ScreenStateCommand(on ? 1 : 0));
+        return executeCommand(new PixooCommand.ScreenStateCommand(on ? 0 : 1));
     }
 
     @Override
