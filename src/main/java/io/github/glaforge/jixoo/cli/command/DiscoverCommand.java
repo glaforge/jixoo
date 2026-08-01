@@ -30,7 +30,7 @@ import java.util.concurrent.Callable;
  */
 @Command(
         name = "discover",
-        description = "Discover Pixoo 64 devices on the local network using UDP broadcast."
+        description = "Discover Pixoo 64 devices on the local network using UDP broadcast and local network HTTP probing."
 )
 public class DiscoverCommand implements Callable<Integer> {
 
