@@ -215,6 +215,24 @@ For full technical protocol documentation of the Pixoo 64 HTTP API, see [SPECIFI
 
 ---
 
+## AI Agent Skills
+
+This repository provides an official Agent Skill for AI agents to automatically interact with your Pixoo 64 device. You can instruct your agents to install and use this skill via the AgentSkills protocol.
+
+To install this skill for your AI agent, you can run:
+
+```bash
+npx skills add github.com/glaforge/jixoo/skills/pixoo64
+```
+or 
+```bash
+gh skills add github.com/glaforge/jixoo/skills/pixoo64
+```
+
+*(Note: Ensure you have `pixoo-cli` installed and available in your `$PATH` before the agent attempts to use the skill.)*
+
+---
+
 ## License
 
 This project is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
