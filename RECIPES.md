@@ -66,26 +66,47 @@ java -jar jixoo64-0.1.0-cli.jar -H 192.168.86.161 gif -f animation.gif
 
 Gemini Omni can generate full videos based on a text prompt. Since Omni outputs standard 16:9 or 9:16 aspect ratios, we must center-crop the video to 1:1 and then scale it down to 64x64 to avoid ugly black letterboxing bars.
 
-### Step 1: Generate Video via REST
-Issue a REST call to the Gemini Omni preview model. Ask for the video download URI.
+### Step 1: Generate Video with Gemini Omni
+Request a video generation by sending a prompt to `gemini-omni-flash-preview` via the `interactions` API endpoint.
 
+#### Text Prompt Only:
 ```bash
 curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?key=$GEMINI_API_KEY" \
 -H "Content-Type: application/json" \
 -d '{
   "model": "models/gemini-omni-flash-preview",
-  "input": "A sea otter showing its head out of the sea waters."
-
-
+  "input": "A head close-up of a cute comic dragon character throwing flames at us.",
   "response_format": {
     "type": "video",
     "aspect_ratio": "16:9",
     "delivery": "uri"
   }
-}'
+}' > response.json
 ```
 
-Download the MP4 from the returned `uri` and save it as `output.mp4`.
+#### Multimodal (Text + Reference Image):
+To reference an image, pass an array of typed parts for `input` containing the base64-encoded image:
+
+```json
+{
+  "model": "models/gemini-omni-flash-preview",
+  "input": [
+    { "type": "text", "text": "A video over a black background that morphs a vibrant glowing rainbow into the provided logo." },
+    { "type": "image", "mime_type": "image/png", "data": "<BASE64_IMAGE_DATA>" }
+  ],
+  "response_format": {
+    "type": "video",
+    "aspect_ratio": "16:9",
+    "delivery": "uri"
+  }
+}
+```
+
+Extract the download URL from the JSON response using Python:
+```bash
+URI=$(python3 -c "import sys, json; print(json.load(sys.stdin)['steps'][1]['content'][0]['uri'])" < response.json)
+curl -s -L -H "x-goog-api-key: $GEMINI_API_KEY" "$URI" -o output.mp4
+```
 
 ### Step 2: Process to High-Quality Pixel Art GIF
 Use `ffmpeg` to scale it to 64x64, generate a custom palette, and apply it with `dither=none` to preserve solid pixel colors.
