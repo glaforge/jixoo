@@ -81,6 +81,7 @@ Send a raw JSON payload directly to the device.
 ```bash
 pixoo-cli raw --json '{"Command": "Channel/SetIndex", "SelectIndex": 0}'
 ```
+*Note: You can find all the raw JSON payloads of the Pixoo HTTP protocol in the [SPECIFICATION.md](https://raw.githubusercontent.com/glaforge/jixoo/main/SPECIFICATION.md).*
 
 ---
 **Tip**: Run `pixoo-cli --help` or `pixoo-cli <subcommand> --help` to see the full list of options, defaults, and requirements for any command!
