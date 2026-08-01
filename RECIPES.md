@@ -1,6 +1,13 @@
 # AI Generation Recipes for Pixoo 64
 
-This guide covers how to use Google's Gemini AI models to generate content and display it on your Divoom Pixoo 64 device using the `jixoo64` CLI.
+This guide covers how to use Google's Gemini AI models to generate content and display it on your Divoom Pixoo 64 device using the `pixoo-cli` command-line tool.
+
+---
+
+## Prerequisites
+
+These recipes assume you are using the native executable binary (`pixoo-cli` on macOS/Linux or `pixoo-cli.exe` on Windows). 
+Before you begin, please check that the binary is installed on your system. If you haven't downloaded it yet, you can find the pre-compiled releases for your operating system on the [GitHub Releases page](https://github.com/divoom/jixoo64/releases).
 
 ---
 
@@ -16,10 +23,7 @@ curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?k
 -H 'Content-Type: application/json' \
 -d '{
   "model": "models/gemini-3.1-flash-image",
-  "input": "A sea otter showing its head out of the sea waters."{
-    "role": "user",
-    "parts": [{"text": "A pixel art 64x64 style image of a cyberpunk city at night."}]
-  }],
+  "input": "A pixel art 64x64 style image of a cyberpunk city at night.",
   "response_format": {
     "type": "image",
     "aspect_ratio": "1:1"
@@ -32,7 +36,7 @@ curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?k
 The `jixoo64` CLI automatically handles resizing the image to the 64x64 canvas.
 
 ```bash
-java -jar jixoo64-0.1.0-cli.jar -H 192.168.86.161 image -f image.png
+pixoo-cli -H 192.168.86.161 image -f image.png
 ```
 
 ---
@@ -57,7 +61,7 @@ ffmpeg -framerate 10 -i frame_%02d.png \
 Upload the custom GIF animation to the device:
 
 ```bash
-java -jar jixoo64-0.1.0-cli.jar -H 192.168.86.161 gif -f animation.gif
+pixoo-cli -H 192.168.86.161 gif -f animation.gif
 ```
 
 ---
@@ -121,5 +125,5 @@ ffmpeg -i output.mp4 -vf "crop=in_h:in_h,scale=64:64,split[s0][s1];[s0]palettege
 Send the converted video animation to the device:
 
 ```bash
-java -jar jixoo64-0.1.0-cli.jar -H 192.168.86.161 gif -f output_hq.gif
+pixoo-cli -H 192.168.86.161 gif -f output_hq.gif
 ```
