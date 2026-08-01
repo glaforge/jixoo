@@ -16,7 +16,7 @@ curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?k
 -H 'Content-Type: application/json' \
 -d '{
   "model": "models/gemini-3.1-flash-image",
-  "contents": [{
+  "input": "A sea otter showing its head out of the sea waters."{
     "role": "user",
     "parts": [{"text": "A pixel art 64x64 style image of a cyberpunk city at night."}]
   }],
@@ -74,12 +74,9 @@ curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?k
 -H "Content-Type: application/json" \
 -d '{
   "model": "models/gemini-omni-flash-preview",
-  "contents": [
-    {
-      "role": "user",
-      "parts": [{"text": "A sea otter showing its head out of the sea waters."}]
-    }
-  ],
+  "input": "A sea otter showing its head out of the sea waters."
+
+
   "response_format": {
     "type": "video",
     "aspect_ratio": "16:9",
