@@ -49,7 +49,14 @@ public class ChannelCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        PixooChannel channel = parseChannel(channelInput);
+        PixooChannel channel;
+        try {
+            channel = parseChannel(channelInput);
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error: " + e.getMessage());
+            return 1;
+        }
+
         PixooClient client = parent.createClient();
         PixooResponse response = client.selectChannel(channel);
         if (response.isSuccess()) {

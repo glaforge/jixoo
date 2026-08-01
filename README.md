@@ -104,12 +104,18 @@ pixoo64 text send -t "Hello World!" -x 0 -y 24 -c "#00FFFF" --dir left -s 50 -a 
 pixoo64 text clear
 ```
 
-#### 7. Display Static Images
+#### 7. Display Solid Plain Colors
+```bash
+pixoo64 color #23ED23
+pixoo64 color 23ED23
+```
+
+#### 8. Display Static Images
 ```bash
 pixoo64 image path/to/artwork.png
 ```
 
-#### 8. Display Animated GIFs
+#### 9. Display Animated GIFs
 ```bash
 # Display local GIF file
 pixoo64 gif --file path/to/animation.gif
@@ -118,12 +124,12 @@ pixoo64 gif --file path/to/animation.gif
 pixoo64 gif --url "http://example.com/animation.gif"
 ```
 
-#### 9. Trigger Piezoelectric Buzzer Sound Pattern
+#### 10. Trigger Piezoelectric Buzzer Sound Pattern
 ```bash
 pixoo64 buzzer --active-ms 500 --off-ms 500 --total-ms 3000
 ```
 
-#### 10. Execute Raw JSON Protocol Commands
+#### 11. Execute Raw JSON Protocol Commands
 ```bash
 pixoo64 raw --json '{"Command": "Channel/SetIndex", "SelectIndex": 0}'
 ```

@@ -20,8 +20,10 @@ import io.github.glaforge.jixoo.image.ImageProcessor;
 import io.github.glaforge.jixoo.internal.HttpPixooClient;
 import io.github.glaforge.jixoo.model.PixooAnimation;
 import io.github.glaforge.jixoo.model.PixooFrame;
+import io.github.glaforge.jixoo.model.RawRgbBuffer;
 import io.github.glaforge.jixoo.model.command.PixooCommand;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.io.InputStream;
@@ -99,6 +101,59 @@ public interface PixooClient extends AutoCloseable {
      */
     default PixooResponse sendFrame(PixooFrame frame) {
         return sendAnimation(PixooAnimation.singleFrame(frame));
+    }
+
+    /**
+     * Fills the display screen with a solid Color.
+     *
+     * @param color the Color to display
+     * @return the device's response
+     */
+    default PixooResponse sendColor(Color color) {
+        byte[] rgbData = RawRgbBuffer.fromColor(color);
+        return sendFrame(new PixooFrame(rgbData, 60000));
+    }
+
+    /**
+     * Fills the display screen with a solid hexadecimal CSS color string (e.g. "#23ED23" or "23ED23").
+     *
+     * @param hexColor the hex color string
+     * @return the device's response
+     */
+    default PixooResponse sendColor(String hexColor) {
+        return sendColor(parseColor(hexColor));
+    }
+
+    /**
+     * Parses a CSS hexadecimal color string (e.g. "#23ED23", "23ED23", "#F00", "F00") into a {@link Color}.
+     *
+     * @param colorStr the color string to parse
+     * @return the parsed Color
+     * @throws IllegalArgumentException if the string format is invalid
+     */
+    static Color parseColor(String colorStr) {
+        if (colorStr == null || colorStr.isBlank()) {
+            throw new IllegalArgumentException("Color string cannot be null or empty");
+        }
+        String hex = colorStr.trim();
+        if (hex.startsWith("#")) {
+            hex = hex.substring(1);
+        }
+        if (hex.length() == 3) {
+            char r = hex.charAt(0);
+            char g = hex.charAt(1);
+            char b = hex.charAt(2);
+            hex = "" + r + r + g + g + b + b;
+        }
+        if (hex.length() != 6) {
+            throw new IllegalArgumentException("Invalid color format: '" + colorStr + "'. Expected hex format like '#23ED23' or '23ED23'.");
+        }
+        try {
+            int rgb = Integer.parseInt(hex, 16);
+            return new Color(rgb);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid hexadecimal color: '" + colorStr + "'.", e);
+        }
     }
 
     /**

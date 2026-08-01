@@ -15,6 +15,7 @@
  */
 package io.github.glaforge.jixoo.api;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -25,6 +26,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public record PixooResponse(
         @JsonProperty("error_code") int errorCode
 ) {
+    @JsonCreator
+    public PixooResponse(@JsonProperty("error_code") int errorCode) {
+        this.errorCode = errorCode;
+    }
+
     /**
      * Checks if the response indicates success.
      *

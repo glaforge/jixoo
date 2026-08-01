@@ -41,6 +41,7 @@ import java.util.concurrent.Callable;
                 TextCommand.class,
                 ImageCommand.class,
                 GifCommand.class,
+                ColorCommand.class,
                 ResetAnimationCommand.class,
                 RawCommand.class
         }

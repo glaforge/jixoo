@@ -170,6 +170,35 @@ class PixooCliTest {
     }
 
     @Test
+    @DisplayName("Color subcommand help should output usage information")
+    void testColorHelp() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
+
+        int exitCode = cmd.execute("color", "--help");
+        assertEquals(0, exitCode);
+        String output = out.toString();
+        assertTrue(output.contains("Fill the display screen with a solid hexadecimal CSS color"));
+    }
+
+    @Test
+    @DisplayName("Color subcommand should validate hex color format")
+    void testColorInvalidFormat() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter err = new StringWriter();
+        cmd.setErr(new PrintWriter(err));
+
+        int exitCode = cmd.execute("--host", "192.168.1.100", "color", "INVALID_COLOR");
+        assertEquals(1, exitCode);
+        assertTrue(err.toString().contains("Invalid color format"));
+    }
+
+    @Test
     @DisplayName("Raw subcommand should fail if neither --json nor --file is provided")
     void testRawMissingParams() {
         PixooCli cli = new PixooCli();

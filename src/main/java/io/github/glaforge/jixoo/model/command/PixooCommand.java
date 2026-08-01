@@ -45,6 +45,7 @@ public sealed interface PixooCommand permits
             @JsonProperty("SelectIndex") int selectIndex
     ) implements PixooCommand {
         @Override
+        @JsonProperty("Command")
         public String command() {
             return "Channel/SetIndex";
         }
@@ -53,8 +54,14 @@ public sealed interface PixooCommand permits
     /** Command to reset the HTTP GIF buffer on the device. */
     record ResetGifCommand() implements PixooCommand {
         @Override
+        @JsonProperty("Command")
         public String command() {
             return "Draw/ResetHttpGifId";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
         }
     }
 
@@ -72,6 +79,7 @@ public sealed interface PixooCommand permits
         }
 
         @Override
+        @JsonProperty("Command")
         public String command() {
             return "Draw/SendHttpGif";
         }
@@ -91,6 +99,7 @@ public sealed interface PixooCommand permits
             @JsonProperty("align") int align
     ) implements PixooCommand {
         @Override
+        @JsonProperty("Command")
         public String command() {
             return "Draw/SendHttpText";
         }
@@ -99,8 +108,14 @@ public sealed interface PixooCommand permits
     /** Command to clear the hardware text engine. */
     record ClearTextCommand() implements PixooCommand {
         @Override
+        @JsonProperty("Command")
         public String command() {
             return "Draw/ClearHttpText";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
         }
     }
 
@@ -109,6 +124,7 @@ public sealed interface PixooCommand permits
             @JsonProperty("Brightness") int brightness
     ) implements PixooCommand {
         @Override
+        @JsonProperty("Command")
         public String command() {
             return "Channel/SetBrightness";
         }
@@ -119,6 +135,7 @@ public sealed interface PixooCommand permits
             @JsonProperty("OnOff") int onOff
     ) implements PixooCommand {
         @Override
+        @JsonProperty("Command")
         public String command() {
             return "Channel/OnOffScreen";
         }
@@ -129,6 +146,7 @@ public sealed interface PixooCommand permits
             @JsonProperty("Mode") int mode
     ) implements PixooCommand {
         @Override
+        @JsonProperty("Command")
         public String command() {
             return "Device/SetScreenRotationAngle";
         }
@@ -141,6 +159,7 @@ public sealed interface PixooCommand permits
             @JsonProperty("PlayTotalTime") int playTotalTime
     ) implements PixooCommand {
         @Override
+        @JsonProperty("Command")
         public String command() {
             return "Device/PlayBuzzer";
         }
@@ -156,6 +175,7 @@ public sealed interface PixooCommand permits
         }
 
         @Override
+        @JsonProperty("Command")
         public String command() {
             return "Device/PlayTFGif";
         }

@@ -15,6 +15,7 @@
  */
 package io.github.glaforge.jixoo.model;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 
 /**
@@ -31,6 +32,28 @@ public final class RawRgbBuffer {
     public static final int TOTAL_BYTES = WIDTH * HEIGHT * BYTES_PER_PIXEL; // 12,288 bytes
 
     private RawRgbBuffer() {}
+
+    /**
+     * Creates a raw 12,288-byte RGB pixel buffer filled entirely with the specified Color.
+     *
+     * @param color the Color to fill the buffer with
+     * @return 12,288-byte array containing RGB sequence
+     */
+    public static byte[] fromColor(Color color) {
+        if (color == null) {
+            throw new IllegalArgumentException("Color cannot be null");
+        }
+        byte r = (byte) color.getRed();
+        byte g = (byte) color.getGreen();
+        byte b = (byte) color.getBlue();
+        byte[] rawRgb = new byte[TOTAL_BYTES];
+        for (int i = 0; i < TOTAL_BYTES; i += 3) {
+            rawRgb[i] = r;
+            rawRgb[i + 1] = g;
+            rawRgb[i + 2] = b;
+        }
+        return rawRgb;
+    }
 
     /**
      * Extracts raw 24-bit RGB pixel data from a 64x64 BufferedImage in top-left to bottom-right raster order.

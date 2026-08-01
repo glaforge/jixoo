@@ -268,6 +268,25 @@ Directs the device to download and play an animation from a remote HTTP URL.
 
 ---
 
+### 4.11. `Channel/GetAllConf`
+Fetches the device's complete hardware and user configuration state.
+
+#### Request Payload
+```json
+{
+  "Command": "Channel/GetAllConf"
+}
+```
+
+#### Response Fields (Partial List)
+* `Brightness`: Current LED brightness (`0` to `100`).
+* `LightSwitch`: Screen power state (`1` for ON, `0` for OFF).
+* `RotationFlag`: Current screen rotation setting.
+* `Mac`: Device MAC address.
+* `CurClockId`: The `ClockId` of the currently configured Faces clock.
+
+---
+
 ## 5. Device Discovery Protocol
 
 The Pixoo 64 can be discovered on a local area network using two primary methods:
@@ -293,3 +312,7 @@ The Pixoo 64 can be discovered on a local area network using two primary methods
 
 3. **HTTP Local Graphics Alternative:**
    Because firmware text overlays can interact unpredictably with active cloud channels, clients can render text locally onto a 64x64 bitmap in memory (e.g., via `java.awt.Graphics2D`) and send the resulting 12,288-byte RGB frame using `Draw/SendHttpGif`.
+
+4. **Custom Channel Screen Flicker (The "Screen State Hack"):**
+   The device actively ignores incoming `Draw/SendHttpGif` frames unless it is already switched to the Custom channel (`Channel/SetIndex: 3`). However, switching to the Custom channel *before* uploading the frames causes the screen to briefly flash whatever old frames were previously in the custom buffer.
+   - **The Fix:** You must wrap the channel switch and frame upload in a screen toggle. First, read `LightSwitch` from `Channel/GetAllConf`. If the screen is ON, send `Channel/OnOffScreen: 0` to turn it off instantly (bypassing the slow hardware fade of `SetBrightness`). Wait ~250ms for the matrix to deactivate. Switch to the Custom channel (`Channel/SetIndex: 3`). Send your GIF frames. Wait another ~250ms for the device's internal display loop to register the new frames, and finally turn the screen back ON (`Channel/OnOffScreen: 1`).

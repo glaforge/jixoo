@@ -21,6 +21,7 @@ import io.github.glaforge.jixoo.model.PixooAnimation;
 import io.github.glaforge.jixoo.model.PixooFrame;
 import io.github.glaforge.jixoo.model.command.PixooCommand;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,11 +34,12 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Implementation of PixooClient using Java 21 HttpClient and Jackson.
+ * HTTP-based implementation of {@link PixooClient}.
  */
 public class HttpPixooClient implements PixooClient {
     private static final Logger log = LoggerFactory.getLogger(HttpPixooClient.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
     private static final AtomicInteger PIC_ID_GENERATOR = new AtomicInteger(new Random().nextInt(10000) + 1);
 
     private final String targetUri;
@@ -93,7 +95,8 @@ public class HttpPixooClient implements PixooClient {
             Thread.currentThread().interrupt();
             throw new PixooException("Command execution interrupted: " + command.command(), e);
         } catch (Exception e) {
-            throw new PixooException("Failed to execute command: " + command.command(), e);
+            String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            throw new PixooException("Failed to execute command " + command.command() + ": " + msg, e);
         }
     }
 
@@ -114,12 +117,54 @@ public class HttpPixooClient implements PixooClient {
         return executeCommand(new PixooCommand.ResetGifCommand());
     }
 
+    private int getLightSwitch() {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(targetUri))
+                    .timeout(requestTimeout)
+                    .header("Content-Type", "application/json; charset=utf-8")
+                    .POST(HttpRequest.BodyPublishers.ofString("{\"Command\":\"Channel/GetAllConf\"}"))
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                String body = response.body();
+                int idx = body.indexOf("\"LightSwitch\"");
+                if (idx > 0) {
+                    int colonIdx = body.indexOf(":", idx);
+                    int commaIdx = body.indexOf(",", colonIdx);
+                    if (commaIdx == -1) commaIdx = body.indexOf("}", colonIdx);
+                    if (colonIdx > 0 && commaIdx > colonIdx) {
+                        return Integer.parseInt(body.substring(colonIdx + 1, commaIdx).trim());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get light switch status", e);
+        }
+        return -1;
+    }
+
+    private int prepareCustomChannel() {
+        if (!autoSwitchToCustomChannel) return -1;
+        
+        int lightSwitch = getLightSwitch();
+        if (lightSwitch == 1) {
+            executeCommand(new PixooCommand.ScreenStateCommand(0));
+            try { Thread.sleep(250); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        }
+        selectChannel(PixooChannel.CUSTOM);
+        return lightSwitch;
+    }
+
+    private void restoreScreen(int lightSwitch) {
+        if (lightSwitch == 1) {
+            executeCommand(new PixooCommand.ScreenStateCommand(1));
+        }
+    }
+
     @Override
     public PixooResponse sendAnimation(PixooAnimation animation) {
-        if (autoSwitchToCustomChannel) {
-            selectChannel(PixooChannel.CUSTOM);
-        }
-
+        int originalState = prepareCustomChannel();
         resetAnimationBuffer();
 
         int totalFrames = animation.frameCount();
@@ -145,23 +190,24 @@ public class HttpPixooClient implements PixooClient {
             }
         }
 
+        try { Thread.sleep(250); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        restoreScreen(originalState);
         return lastResponse;
     }
 
     @Override
     public PixooResponse sendRemoteGifUrl(String gifUrl) {
-        if (autoSwitchToCustomChannel) {
-            selectChannel(PixooChannel.CUSTOM);
-        }
-        return executeCommand(new PixooCommand.RemoteGifCommand(gifUrl));
+        int originalState = prepareCustomChannel();
+        PixooResponse response = executeCommand(new PixooCommand.RemoteGifCommand(gifUrl));
+        try { Thread.sleep(250); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        restoreScreen(originalState);
+        return response;
     }
 
     @Override
     public PixooResponse sendText(PixooText text) {
-        if (autoSwitchToCustomChannel) {
-            selectChannel(PixooChannel.CUSTOM);
-        }
-        return executeCommand(new PixooCommand.SendTextCommand(
+        int originalState = prepareCustomChannel();
+        PixooResponse response = executeCommand(new PixooCommand.SendTextCommand(
                 text.textId(),
                 text.x(),
                 text.y(),
@@ -173,6 +219,9 @@ public class HttpPixooClient implements PixooClient {
                 text.color(),
                 text.align()
         ));
+        try { Thread.sleep(250); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        restoreScreen(originalState);
+        return response;
     }
 
     @Override
