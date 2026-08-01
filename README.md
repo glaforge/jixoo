@@ -7,7 +7,7 @@ Modern Java 21 client library and native CLI for the **Divoom Pixoo 64** 64x64 R
 ## Features
 
 - ☕ **Modern Java 21 API**: Built with Java 21 records, sealed interfaces, and native `HttpClient` enforcing HTTP/1.1 protocol rules required by the Pixoo 64 ESP32 web server.
-- 🚀 **Picocli Command-Line Interface (`pixoo64`)**: Full-featured terminal application with fast command execution.
+- 🚀 **Picocli Command-Line Interface (`pixoo-cli`)**: Full-featured terminal application with fast command execution.
 - ⚡ **GraalVM 25 Native Image Support**: Instantaneous (<5ms startup) native executable support (`mvn package -Pnative`).
 - 🔍 **Subnet Device Discovery**: Auto-discover active Pixoo 64 devices on your local network using UDP broadcast.
 - 🖼️ **Image & Animated GIF Processing**: Load PNG, JPG, BMP, or animated GIF files from disk or stream remote GIF URLs directly. Includes smart aspect-ratio preserving scaling and letterboxing for 64x64 matrix pixels.
@@ -48,7 +48,11 @@ mvn package -Pnative -DskipTests
 ```
 
 The standalone native binary will be generated at:
-`./target/pixoo64`
+`./target/pixoo-cli`
+
+### Download Pre-compiled Binaries
+
+You can download ready-to-use native binaries for Linux, macOS (Apple Silicon), and Windows from the [GitHub Releases page](https://github.com/divoom/jixoo64/releases).
 
 ### Releasing Native Binaries
 
@@ -65,7 +69,7 @@ The CI pipeline will automatically extract the version from the tag, compile the
 
 ---
 
-## CLI Usage (`pixoo64`)
+## CLI Usage (`pixoo-cli`)
 
 Set your target Pixoo 64 device IP address via command-line option `-H` / `--host` or environment variable `PIXOO_HOST`:
 
@@ -77,74 +81,74 @@ export PIXOO_HOST="192.168.1.100"
 
 #### 1. Auto-Discover Devices
 ```bash
-pixoo64 discover
+pixoo-cli discover
 ```
 
 #### 2. Channel Switching
 ```bash
-pixoo64 -H 192.168.1.100 channel clock
-pixoo64 channel cloud
-pixoo64 channel visualizer
-pixoo64 channel custom
-pixoo64 channel black-screen
+pixoo-cli -H 192.168.1.100 channel clock
+pixoo-cli channel cloud
+pixoo-cli channel visualizer
+pixoo-cli channel custom
+pixoo-cli channel black-screen
 ```
 
 #### 3. Set LED Brightness (0-100%)
 ```bash
-pixoo64 brightness 80
+pixoo-cli brightness 80
 ```
 
 #### 4. Power Screen Display On/Off
 ```bash
-pixoo64 screen off
-pixoo64 screen on
+pixoo-cli screen off
+pixoo-cli screen on
 ```
 
 #### 5. Screen Rotation
 ```bash
-pixoo64 rotation 0      # Normal (0°)
-pixoo64 rotation 90     # 90° Clockwise
-pixoo64 rotation 180    # 180°
-pixoo64 rotation 270    # 270° Clockwise
+pixoo-cli rotation 0      # Normal (0°)
+pixoo-cli rotation 90     # 90° Clockwise
+pixoo-cli rotation 180    # 180°
+pixoo-cli rotation 270    # 270° Clockwise
 ```
 
 #### 6. Text Layer Rendering
 ```bash
 # Render scrolling text
-pixoo64 text send -t "Hello World!" -x 0 -y 24 -c "#00FFFF" --dir left -s 50 -a center
+pixoo-cli text send -t "Hello World!" -x 0 -y 24 -c "#00FFFF" --dir left -s 50 -a center
 
 # Clear all text overlays
-pixoo64 text clear
+pixoo-cli text clear
 ```
 
 #### 7. Display Solid Plain Colors
 ```bash
-pixoo64 color #23ED23
-pixoo64 color 23ED23
+pixoo-cli color #23ED23
+pixoo-cli color 23ED23
 ```
 
 #### 8. Display Static Images
 ```bash
-pixoo64 image path/to/artwork.png
+pixoo-cli image path/to/artwork.png
 ```
 
 #### 9. Display Animated GIFs
 ```bash
 # Display local GIF file
-pixoo64 gif --file path/to/animation.gif
+pixoo-cli gif --file path/to/animation.gif
 
 # Render remote HTTP GIF URL
-pixoo64 gif --url "http://example.com/animation.gif"
+pixoo-cli gif --url "http://example.com/animation.gif"
 ```
 
 #### 10. Trigger Piezoelectric Buzzer Sound Pattern
 ```bash
-pixoo64 buzzer --active-ms 500 --off-ms 500 --total-ms 3000
+pixoo-cli buzzer --active-ms 500 --off-ms 500 --total-ms 3000
 ```
 
 #### 11. Execute Raw JSON Protocol Commands
 ```bash
-pixoo64 raw --json '{"Command": "Channel/SetIndex", "SelectIndex": 0}'
+pixoo-cli raw --json '{"Command": "Channel/SetIndex", "SelectIndex": 0}'
 ```
 
 ---

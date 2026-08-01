@@ -111,10 +111,10 @@ curl -s -L -H "x-goog-api-key: $GEMINI_API_KEY" "$URI" -o output.mp4
 ### Step 2: Process to High-Quality Pixel Art GIF
 Use `ffmpeg` to scale it to 64x64, generate a custom palette, and apply it with `dither=none` to preserve solid pixel colors.
 
-*Note: The Pixoo 64 can only buffer about 60 frames for custom HTTP animations before crashing due to memory limits. Since Omni videos are ~10 seconds long, we must lower the framerate to 6 FPS (`-r 6`) to keep the frame count around 60.*
+*Note: The Pixoo 64 hardware animation player will only display the first 30–32 frames of a custom HTTP GIF before looping. To ensure a full 10-second video plays from start to finish without getting cut in half, set the framerate to 3 FPS (`-r 3`), which keeps the total frame count around 30 frames.*
 
 ```bash
-ffmpeg -i output.mp4 -vf "scale=64:64,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=none" -r 6 -loop 0 output_hq.gif
+ffmpeg -i output.mp4 -vf "crop=in_h:in_h,scale=64:64,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=none" -r 3 -loop 0 output_hq.gif
 ```
 
 ### Step 3: Display on Pixoo
