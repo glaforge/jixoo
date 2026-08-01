@@ -1,0 +1,99 @@
+# AI Generation Recipes for Pixoo 64
+
+This guide covers how to use Google's Gemini AI models to generate content and display it on your Divoom Pixoo 64 device using the `jixoo64` CLI.
+
+---
+
+## 1. Static Images (Nano Banana / Gemini Flash Image)
+
+You can generate 1:1 aspect ratio images using the Gemini Image generation models and display them directly on your Pixoo. 
+
+### Step 1: Generate the Image
+Use the Gemini Image API to generate a square image.
+
+```bash
+curl -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$GEMINI_API_KEY" \
+-H 'Content-Type: application/json' \
+-d '{
+  "contents": [{
+    "parts": [{"text": "A pixel art 64x64 style image of a cyberpunk city at night."}]
+  }]
+}'
+```
+*(Note: Extract the Base64 output from the response and save it as `image.png`)*
+
+### Step 2: Display on Pixoo
+The `jixoo64` CLI automatically handles resizing the image to the 64x64 canvas.
+
+```bash
+java -jar jixoo64-0.1.0-cli.jar -H 192.168.86.161 image -f image.png
+```
+
+---
+
+## 2. Animations (From a Series of Images)
+
+You can create an animation by generating a sequence of images (e.g. frames of a character walking) and stitching them together into a GIF.
+
+### Step 1: Generate Frame Sequence
+Generate multiple images using the API (or extract them). Save them sequentially, e.g., `frame_01.png`, `frame_02.png`, etc.
+
+### Step 2: Stitch into a GIF with FFmpeg
+Use `ffmpeg` to stitch the images into a high-quality, pixel-perfect 64x64 GIF at 10 frames per second. We use nearest-neighbor scaling and disable dithering to keep the colors crisp for the Pixoo.
+
+```bash
+ffmpeg -framerate 10 -i frame_%02d.png \
+  -vf "scale=64:64:flags=neighbor,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=none" \
+  -loop 0 animation.gif
+```
+
+### Step 3: Display on Pixoo
+Upload the custom GIF animation to the device:
+
+```bash
+java -jar jixoo64-0.1.0-cli.jar -H 192.168.86.161 gif -f animation.gif
+```
+
+---
+
+## 3. Video (Gemini Omni)
+
+Gemini Omni can generate full videos based on a text prompt. Since Omni outputs standard 16:9 or 9:16 aspect ratios, we must center-crop the video to 1:1 and then scale it down to 64x64 to avoid ugly black letterboxing bars.
+
+### Step 1: Generate Video via REST
+Issue a REST call to the Gemini Omni preview model. Ask for the video download URI.
+
+```bash
+curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?key=$GEMINI_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "model": "models/gemini-omni-flash-preview",
+  "contents": [
+    {
+      "role": "user",
+      "parts": [{"text": "A sea otter showing its head out of the sea waters."}]
+    }
+  ],
+  "response_format": {
+    "type": "video",
+    "aspect_ratio": "16:9",
+    "delivery": "uri"
+  }
+}'
+```
+
+Download the MP4 from the returned `uri` and save it as `output.mp4`.
+
+### Step 2: Process to High-Quality Pixel Art GIF
+Use `ffmpeg` to perform a 1:1 center crop (`crop=in_h:in_h`), scale it to 64x64, generate a custom palette, and apply it with `dither=none` to preserve solid pixel colors.
+
+```bash
+ffmpeg -i output.mp4 -vf "crop=in_h:in_h,scale=64:64,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=none" -loop 0 output_hq.gif
+```
+
+### Step 3: Display on Pixoo
+Send the converted video animation to the device:
+
+```bash
+java -jar jixoo64-0.1.0-cli.jar -H 192.168.86.161 gif -f output_hq.gif
+```
