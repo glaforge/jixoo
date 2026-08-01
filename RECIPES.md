@@ -88,10 +88,12 @@ curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?k
 Download the MP4 from the returned `uri` and save it as `output.mp4`.
 
 ### Step 2: Process to High-Quality Pixel Art GIF
-Use `ffmpeg` to perform a 1:1 center crop (`crop=in_h:in_h`), scale it to 64x64, generate a custom palette, and apply it with `dither=none` to preserve solid pixel colors.
+Use `ffmpeg` to scale it to 64x64, generate a custom palette, and apply it with `dither=none` to preserve solid pixel colors.
+
+*Note: The Pixoo 64 can only buffer about 60 frames for custom HTTP animations before crashing due to memory limits. Since Omni videos are ~10 seconds long, we must lower the framerate to 6 FPS (`-r 6`) to keep the frame count around 60.*
 
 ```bash
-ffmpeg -i output.mp4 -vf "crop=in_h:in_h,scale=64:64,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=none" -loop 0 output_hq.gif
+ffmpeg -i output.mp4 -vf "scale=64:64,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=none" -r 6 -loop 0 output_hq.gif
 ```
 
 ### Step 3: Display on Pixoo
