@@ -70,3 +70,6 @@ nbdist/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Generated outputs
+output/
