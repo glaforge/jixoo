@@ -26,6 +26,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class PixooCliTest {
 
+    static {
+        System.setProperty("picocli.ansi", "false");
+    }
+
     @Test
     @DisplayName("Root CLI should print help output when run without arguments or with --help")
     void testRootHelp() {
