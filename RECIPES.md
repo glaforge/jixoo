@@ -64,7 +64,7 @@ java -jar jixoo64-0.1.0-cli.jar -H 192.168.86.161 gif -f animation.gif
 
 ## 3. Video (Gemini Omni)
 
-Gemini Omni can generate full videos based on a text prompt. We can request a 1:1 aspect ratio directly from the API so it perfectly fits the Pixoo 64 without needing to be cropped.
+Gemini Omni can generate full videos based on a text prompt. Since Omni outputs standard 16:9 or 9:16 aspect ratios, we must center-crop the video to 1:1 and then scale it down to 64x64 to avoid ugly black letterboxing bars.
 
 ### Step 1: Generate Video via REST
 Issue a REST call to the Gemini Omni preview model. Ask for the video download URI.
@@ -82,7 +82,7 @@ curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?k
   ],
   "response_format": {
     "type": "video",
-    "aspect_ratio": "1:1",
+    "aspect_ratio": "16:9",
     "delivery": "uri"
   }
 }'
@@ -91,10 +91,10 @@ curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?k
 Download the MP4 from the returned `uri` and save it as `output.mp4`.
 
 ### Step 2: Process to High-Quality Pixel Art GIF
-Use `ffmpeg` to scale it to 64x64, generate a custom palette, and apply it with `dither=none` to preserve solid pixel colors.
+Use `ffmpeg` to perform a 1:1 center crop (`crop=in_h:in_h`), scale it to 64x64, generate a custom palette, and apply it with `dither=none` to preserve solid pixel colors.
 
 ```bash
-ffmpeg -i output.mp4 -vf "scale=64:64,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=none" -loop 0 output_hq.gif
+ffmpeg -i output.mp4 -vf "crop=in_h:in_h,scale=64:64,split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=none" -loop 0 output_hq.gif
 ```
 
 ### Step 3: Display on Pixoo
