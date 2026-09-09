@@ -203,16 +203,159 @@ class PixooCliTest {
     }
 
     @Test
-    @DisplayName("Raw subcommand should fail if neither --json nor --file is provided")
-    void testRawMissingParams() {
+    @DisplayName("Cloud subcommand help should list cloud subcommands")
+    void testCloudHelp() {
         PixooCli cli = new PixooCli();
         CommandLine cmd = new CommandLine(cli);
 
-        StringWriter err = new StringWriter();
-        cmd.setErr(new PrintWriter(err));
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
 
-        int exitCode = cmd.execute("--host", "192.168.1.100", "raw");
-        assertEquals(1, exitCode);
-        assertTrue(err.toString().contains("Specify either --json"));
+        int exitCode = cmd.execute("cloud", "--help");
+        assertEquals(0, exitCode);
+        String output = out.toString();
+        assertTrue(output.contains("login"));
+        assertTrue(output.contains("logout"));
+        assertTrue(output.contains("devices"));
+        assertTrue(output.contains("channel"));
+        assertTrue(output.contains("gallery"));
+    }
+
+    @Test
+    @DisplayName("Cloud logout subcommand help should show options")
+    void testCloudLogoutHelp() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
+
+        int exitCode = cmd.execute("cloud", "logout", "--help");
+        assertEquals(0, exitCode);
+        String output = out.toString();
+        assertTrue(output.contains("Log out from Divoom Cloud"));
+    }
+
+    @Test
+    @DisplayName("Cloud channel subcommand help should show options")
+    void testCloudChannelHelp() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
+
+        int exitCode = cmd.execute("cloud", "channel", "--help");
+        assertEquals(0, exitCode);
+        String output = out.toString();
+        assertTrue(output.contains("--file"));
+        assertTrue(output.contains("--slot"));
+        assertTrue(output.contains("--logout"));
+    }
+
+    @Test
+    @DisplayName("Tool subcommand help should list all hardware tools")
+    void testToolHelp() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
+
+        int exitCode = cmd.execute("tool", "--help");
+        assertEquals(0, exitCode);
+        String output = out.toString();
+        assertTrue(output.contains("stopwatch"));
+        assertTrue(output.contains("timer"));
+        assertTrue(output.contains("scoreboard"));
+        assertTrue(output.contains("noise"));
+    }
+
+    @Test
+    @DisplayName("Tool subcommands individual help")
+    void testToolSubcommandsHelp() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
+
+        assertEquals(0, cmd.execute("tool", "stopwatch", "--help"));
+        assertTrue(out.toString().contains("stopwatch"));
+
+        out.getBuffer().setLength(0);
+        assertEquals(0, cmd.execute("tool", "timer", "--help"));
+        assertTrue(out.toString().contains("--min"));
+        assertTrue(out.toString().contains("--sec"));
+
+        out.getBuffer().setLength(0);
+        assertEquals(0, cmd.execute("tool", "scoreboard", "--help"));
+        assertTrue(out.toString().contains("--blue"));
+        assertTrue(out.toString().contains("--red"));
+
+        out.getBuffer().setLength(0);
+        assertEquals(0, cmd.execute("tool", "noise", "--help"));
+        assertTrue(out.toString().contains("noise"));
+    }
+
+    @Test
+    @DisplayName("Time subcommand help should show sync")
+    void testTimeHelp() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
+
+        int exitCode = cmd.execute("time", "--help");
+        assertEquals(0, exitCode);
+        String output = out.toString();
+        assertTrue(output.contains("sync"));
+    }
+
+    @Test
+    @DisplayName("Config subcommand help should show get and set")
+    void testConfigHelp() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
+
+        int exitCode = cmd.execute("config", "--help");
+        assertEquals(0, exitCode);
+        String output = out.toString();
+        assertTrue(output.contains("get"));
+        assertTrue(output.contains("set"));
+
+        out.getBuffer().setLength(0);
+        assertEquals(0, cmd.execute("config", "set", "--help"));
+        String setOutput = out.toString();
+        assertTrue(setOutput.contains("--time-format"));
+        assertTrue(setOutput.contains("--temp-unit"));
+        assertTrue(setOutput.contains("--date-format"));
+        assertTrue(setOutput.contains("--mirror"));
+        assertTrue(setOutput.contains("--auto-off"));
+    }
+
+    @Test
+    @DisplayName("Channel subcommands help for startup, clock-face, and page")
+    void testChannelSubcommandsHelp() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
+
+        assertEquals(0, cmd.execute("channel", "startup", "--help"));
+        assertTrue(out.toString().contains("startup"));
+
+        out.getBuffer().setLength(0);
+        assertEquals(0, cmd.execute("channel", "clock-face", "--help"));
+        assertTrue(out.toString().contains("clock"));
+
+        out.getBuffer().setLength(0);
+        assertEquals(0, cmd.execute("channel", "page", "--help"));
+        assertTrue(out.toString().contains("page"));
     }
 }

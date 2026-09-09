@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Git tag to release (e.g. v0.2.0)'
+        required: false
+        default: 'v0.2.0'
 
 jobs:
   build-and-release:
@@ -31,8 +37,14 @@ jobs:
       - name: Extract version from tag
         id: extract_version
         run: |
-          TAG_NAME="${GITHUB_REF#refs/tags/v}"
-          echo "VERSION=$TAG_NAME" >> $GITHUB_ENV
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            RAW_TAG="${{ github.event.inputs.tag }}"
+          else
+            RAW_TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          VERSION="${RAW_TAG#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG_NAME=$RAW_TAG" >> $GITHUB_ENV
         shell: bash
 
       - name: Set up Java 21 and GraalVM
@@ -62,6 +74,7 @@ jobs:
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.TAG_NAME }}
           files: target/${{ matrix.asset_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

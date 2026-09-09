@@ -44,4 +44,20 @@ public enum PixooChannel {
     public int index() {
         return index;
     }
+
+    /**
+     * Resolves a PixooChannel from its integer index (0..4).
+     *
+     * @param index the channel index
+     * @return the corresponding PixooChannel
+     * @throws IllegalArgumentException if index is invalid
+     */
+    public static PixooChannel fromIndex(int index) {
+        for (PixooChannel c : values()) {
+            if (c.index == index) {
+                return c;
+            }
+        }
+        throw new IllegalArgumentException("Unknown channel index: " + index + ". Valid indices are 0 to 4.");
+    }
 }

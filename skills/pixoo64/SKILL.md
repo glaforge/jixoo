@@ -1,6 +1,6 @@
 ---
 name: pixoo64
-description: Interact with Divoom Pixoo 64 devices to display images, videos, text, colors, change channels, and ring the buzzer. Includes AI generation tools for Gemini.
+description: Interact with Divoom Pixoo 64 devices to display images, videos, text, colors, change channels, run hardware tools (stopwatch, timer, scoreboard, noise meter), sync time, and configure device settings. Includes AI generation tools for Gemini.
 license: Apache-2.0
 compatibility: Requires pixoo-cli to be installed and available in the system PATH.
 ---
@@ -13,7 +13,15 @@ If the user does not have it installed, you can download the pre-compiled binary
 
 ## 1. Controlling the Device
 
-You can use the `pixoo-cli` tool to directly control the Pixoo 64 device. The CLI provides a wide variety of commands to change channels, set brightness, turn the screen on/off, draw text, display solid colors, play custom animations (GIFs), and ring the buzzer.
+You can use the `pixoo-cli` tool to directly control the Pixoo 64 device. The CLI provides a wide variety of commands to:
+- Change channels, set startup boot channel, select clock faces, or switch custom gallery page slots
+- Set brightness, query screen state (`screen status`), and toggle screen on/off
+- Control hardware tools: digital stopwatch, countdown timer, dual scoreboard (Blue vs Red), and ambient noise decibel meter
+- Synchronize hardware real-time clock (`time sync`)
+- Inspect and configure system settings (`config get` / `config set`: 12/24h, Celsius/Fahrenheit, date format, mirror mode, auto-off)
+- Draw text overlays, display solid colors, render static images, and play animated GIFs
+- Trigger piezoelectric buzzer sound rhythms
+- Manage Divoom Cloud integration, persistent flash custom channel playlists, and gallery uploads
 
 When you need to execute a command, first ensure you know the device IP address, which the user can provide or which can be discovered using the `discover` subcommand if on the same local network.
 

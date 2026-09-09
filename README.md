@@ -9,10 +9,14 @@ Modern Java 21 client library and native CLI for the **Divoom Pixoo 64** 64x64 R
 - ☕ **Modern Java 21 API**: Built with Java 21 records, sealed interfaces, and native `HttpClient` enforcing HTTP/1.1 protocol rules required by the Pixoo 64 ESP32 web server.
 - 🚀 **Picocli Command-Line Interface (`pixoo-cli`)**: Full-featured terminal application with fast command execution.
 - ⚡ **GraalVM 25 Native Image Support**: Instantaneous (<5ms startup) native executable support (`mvn package -Pnative`).
-- 🔍 **Subnet Device Discovery**: Auto-discover active Pixoo 64 devices on your local network using UDP broadcast.
+- 🔍 **Subnet Device Discovery**: Auto-discover active Pixoo 64 devices on your local network using UDP broadcast and ARP scanning.
 - 🖼️ **Image & Animated GIF Processing**: Load PNG, JPG, BMP, or animated GIF files from disk or stream remote GIF URLs directly. Includes smart aspect-ratio preserving scaling and letterboxing for 64x64 matrix pixels.
 - ✍️ **Hardware Text Layer Rendering**: Multi-slot text overlay engine supporting ROM fonts, scroll direction (static, left, right), speed, positioning, hexadecimal colors, and alignments.
-- 🎛️ **Full Device Control**: Channel switching (Clock, Cloud Gallery, Visualizer, Custom, Black Screen), LED matrix brightness, screen power toggle, rotation angle, buzzer alarm tone patterns, and raw JSON command execution.
+- ⏱️ **Interactive Hardware Tools Engine**: Control on-screen Stopwatch, Countdown Timer, Scoreboard (Blue vs Red), and real-time Ambient Noise Decibel Meter.
+- 🕒 **Direct RTC Clock Synchronization**: Synchronize device hardware real-time clock without relying on external cloud NTP.
+- ⚙️ **System Configuration Management**: Configure 12/24-hour time format, Celsius/Fahrenheit units, date formatting, display mirroring, auto-sleep timers, and startup channels.
+- ☁️ **Divoom Cloud & Persistent Custom Channels**: Direct integration with Divoom Cloud API for persistent flash playlist storage and gallery publishing.
+- 🎛️ **Full Device Control**: Channel switching, LED matrix brightness, screen power toggle and status query, rotation angle modes, buzzer alarm tone patterns, and raw JSON execution.
 
 ---
 
@@ -54,19 +58,6 @@ The standalone native binary will be generated at:
 
 You can download ready-to-use native binaries for Linux, macOS (Apple Silicon), and Windows from the [GitHub Releases page](https://github.com/divoom/jixoo64/releases).
 
-### Releasing Native Binaries
-
-This project uses a GitHub Actions workflow to automatically build and publish native binaries for Linux, macOS (Apple Silicon), and Windows. 
-
-To trigger a new release, create a Git tag starting with `v` (e.g., `v1.0.0`) and push it to GitHub:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-The CI pipeline will automatically extract the version from the tag, compile the native executables via GraalVM, and attach them to a new GitHub Release on the repository.
-
 ---
 
 ## CLI Usage (`pixoo-cli`)
@@ -84,13 +75,29 @@ export PIXOO_HOST="192.168.1.100"
 pixoo-cli discover
 ```
 
-#### 2. Channel Switching
+#### 2. Channel Switching & Management
 ```bash
-pixoo-cli -H 192.168.1.100 channel clock
+# Switch active channel
+pixoo-cli channel clock
 pixoo-cli channel cloud
 pixoo-cli channel visualizer
 pixoo-cli channel custom
 pixoo-cli channel black-screen
+
+# Manage default boot channel
+pixoo-cli channel startup               # Query startup channel
+pixoo-cli channel startup custom        # Set startup channel to Custom
+
+# Select clock face by ID
+pixoo-cli channel clock-face            # Query active clock ID
+pixoo-cli channel clock-face 42         # Select clock face 42
+
+# Switch custom gallery page slot (0, 1, 2)
+pixoo-cli channel page                  # Query active page slot
+pixoo-cli channel page 1                # Switch to page slot 1
+
+# Query channel timing configuration
+pixoo-cli channel config
 ```
 
 #### 3. Set LED Brightness (0-100%)
@@ -98,21 +105,61 @@ pixoo-cli channel black-screen
 pixoo-cli brightness 80
 ```
 
-#### 4. Power Screen Display On/Off
+#### 4. Power Screen Display On/Off & Status
 ```bash
-pixoo-cli screen off
-pixoo-cli screen on
+pixoo-cli screen status   # Query if screen is ON or OFF
+pixoo-cli screen on       # Turn screen ON
+pixoo-cli screen off      # Turn screen OFF / Standby
 ```
 
 #### 5. Screen Rotation
 ```bash
-pixoo-cli rotation 0      # Normal (0°)
-pixoo-cli rotation 90     # 90° Clockwise
-pixoo-cli rotation 180    # 180°
-pixoo-cli rotation 270    # 270° Clockwise
+pixoo-cli rotation 0      # Normal (0°, mode 0)
+pixoo-cli rotation 90     # 90° Clockwise (mode 1)
+pixoo-cli rotation 180    # 180° (mode 2)
+pixoo-cli rotation 270    # 270° Clockwise (mode 3)
 ```
 
-#### 6. Text Layer Rendering
+#### 6. Built-in Hardware Tools (`tool`)
+```bash
+# Stopwatch
+pixoo-cli tool stopwatch start
+pixoo-cli tool stopwatch stop
+pixoo-cli tool stopwatch reset
+pixoo-cli tool stopwatch status
+
+# Countdown Timer
+pixoo-cli tool timer --min 5 --sec 30 start
+pixoo-cli tool timer stop
+pixoo-cli tool timer status
+
+# Scoreboard (Dual team: Blue vs Red)
+pixoo-cli tool scoreboard --blue 21 --red 18 set
+pixoo-cli tool scoreboard get
+
+# Ambient Noise Decibel Meter
+pixoo-cli tool noise start
+pixoo-cli tool noise stop
+pixoo-cli tool noise status
+```
+
+#### 7. Clock Synchronization (`time`)
+```bash
+# Synchronize device real-time clock to host local time
+pixoo-cli time sync
+```
+
+#### 8. System Configuration (`config`)
+```bash
+# Query system configuration
+pixoo-cli config get
+
+# Update settings
+pixoo-cli config set --time-format 24 --temp-unit c --auto-off 0
+pixoo-cli config set --mirror off --date-format 1
+```
+
+#### 9. Text Layer Rendering
 ```bash
 # Render scrolling text
 pixoo-cli text send -t "Hello World!" -x 0 -y 24 -c "#00FFFF" --dir left -s 50 -a center
@@ -121,32 +168,45 @@ pixoo-cli text send -t "Hello World!" -x 0 -y 24 -c "#00FFFF" --dir left -s 50 -
 pixoo-cli text clear
 ```
 
-#### 7. Display Solid Plain Colors
+#### 10. Display Solid Plain Colors
 ```bash
 pixoo-cli color #23ED23
 pixoo-cli color 23ED23
 ```
 
-#### 8. Display Static Images
+#### 11. Display Static Images & Animated GIFs
 ```bash
+# Display image file (auto-resized and centered)
 pixoo-cli image path/to/artwork.png
-```
 
-#### 9. Display Animated GIFs
-```bash
-# Display local GIF file
+# Display local animated GIF
 pixoo-cli gif --file path/to/animation.gif
 
-# Render remote HTTP GIF URL
+# Stream remote HTTP GIF
 pixoo-cli gif --url "http://example.com/animation.gif"
 ```
 
-#### 10. Trigger Piezoelectric Buzzer Sound Pattern
+#### 12. Divoom Cloud & Custom Channels (`cloud`)
+```bash
+# Log in to Divoom Cloud account
+pixoo-cli cloud login -e user@example.com -p mypassword
+
+# List bound hardware devices
+pixoo-cli cloud devices
+
+# Upload animation to persistent Custom Channel slot (slot 0..2)
+pixoo-cli cloud channel --file animation.gif --slot 0
+
+# Publish artwork to Divoom Cloud Gallery
+pixoo-cli cloud gallery --file artwork.gif --name "Pixel Art" --desc "Created with jixoo64"
+```
+
+#### 13. Trigger Buzzer Sound Pattern
 ```bash
 pixoo-cli buzzer --active-ms 500 --off-ms 500 --total-ms 3000
 ```
 
-#### 11. Execute Raw JSON Protocol Commands
+#### 14. Execute Raw JSON Protocol Commands
 ```bash
 pixoo-cli raw --json '{"Command": "Channel/SetIndex", "SelectIndex": 0}'
 ```
@@ -161,34 +221,42 @@ Include `jixoo64` in your project dependencies.
 
 ```java
 import io.github.glaforge.jixoo.api.*;
+import io.github.glaforge.jixoo.model.tool.StopwatchAction;
 
 import java.nio.file.Path;
 
 public class PixooExample {
     public static void main(String[] args) {
-        // Create client
-        PixooClient client = PixooClient.create("192.168.1.100");
+        // Connect to Pixoo 64 device
+        try (PixooClient client = PixooClient.create("192.168.1.100")) {
+            
+            // 1. Sync real-time clock
+            client.syncTime();
 
-        // 1. Switch to Clock channel
-        client.selectChannel(PixooChannel.CLOCK);
+            // 2. Switch to Clock channel
+            client.selectChannel(PixooChannel.CLOCK);
 
-        // 2. Adjust LED brightness
-        client.setBrightness(75);
+            // 3. Adjust LED brightness
+            client.setBrightness(75);
 
-        // 3. Display an image file
-        client.sendImage(Path.of("image.png"));
+            // 4. Display an image file
+            client.sendImage(Path.of("artwork.png"));
 
-        // 4. Send hardware text overlay
-        PixooText text = PixooText.builder()
-                .textId(1)
-                .position(0, 24)
-                .text("ALERT!")
-                .color("#FF0000")
-                .scrollLeft()
-                .speed(50)
-                .alignCenter()
-                .build();
-        client.sendText(text);
+            // 5. Send hardware text overlay
+            PixooText text = PixooText.builder()
+                    .textId(1)
+                    .position(0, 24)
+                    .text("ALERT!")
+                    .color("#FF0000")
+                    .scrollLeft()
+                    .speed(50)
+                    .alignCenter()
+                    .build();
+            client.sendText(text);
+
+            // 6. Control hardware stopwatch
+            client.setStopwatch(StopwatchAction.START);
+        }
     }
 }
 ```
@@ -219,7 +287,7 @@ For full technical protocol documentation of the Pixoo 64 HTTP API, see [SPECIFI
 
 This repository provides an official Agent Skill for AI agents to automatically interact with your Pixoo 64 device. You can instruct your agents to install and use this skill via the AgentSkills protocol.
 
-To install this skill for your AI agent, you can run:
+To install this skill for your AI agent:
 
 ```bash
 npx skills add github.com/glaforge/jixoo/skills/pixoo64
@@ -228,8 +296,6 @@ or
 ```bash
 gh skills add github.com/glaforge/jixoo/skills/pixoo64
 ```
-
-*(Note: Ensure you have `pixoo-cli` installed and available in your `$PATH` before the agent attempts to use the skill.)*
 
 ---
 
@@ -242,4 +308,3 @@ This project is licensed under the Apache License, Version 2.0. See [LICENSE](LI
 ## Disclaimer
 
 This is not an official Google project.
-

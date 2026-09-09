@@ -15,6 +15,7 @@
  */
 package io.github.glaforge.jixoo.model.command;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
@@ -29,9 +30,29 @@ public sealed interface PixooCommand permits
         PixooCommand.ClearTextCommand,
         PixooCommand.BrightnessCommand,
         PixooCommand.ScreenStateCommand,
+        PixooCommand.GetScreenStateCommand,
         PixooCommand.RotationCommand,
         PixooCommand.PlayBuzzerCommand,
-        PixooCommand.RemoteGifCommand {
+        PixooCommand.RemoteGifCommand,
+        PixooCommand.SetUtcCommand,
+        PixooCommand.GetDeviceConfigCommand,
+        PixooCommand.GetSysConfigCommand,
+        PixooCommand.SetSysConfigCommand,
+        PixooCommand.SetStopWatchCommand,
+        PixooCommand.GetStopWatchCommand,
+        PixooCommand.SetTimerCommand,
+        PixooCommand.GetTimerCommand,
+        PixooCommand.SetScoreBoardCommand,
+        PixooCommand.GetScoreBoardCommand,
+        PixooCommand.SetNoiseStatusCommand,
+        PixooCommand.GetNoiseStatusCommand,
+        PixooCommand.SetStartupChannelCommand,
+        PixooCommand.GetStartupChannelCommand,
+        PixooCommand.SetClockSelectIdCommand,
+        PixooCommand.GetClockInfoCommand,
+        PixooCommand.SetCustomPageIndexCommand,
+        PixooCommand.GetCustomPageIndexCommand,
+        PixooCommand.GetStorageStatusCommand {
 
     /**
      * Gets the command string identifier used by the Pixoo64 API.
@@ -143,7 +164,21 @@ public sealed interface PixooCommand permits
         }
     }
 
-    /** Command to set the screen rotation angle. */
+    /** Command to query screen power state. */
+    record GetScreenStateCommand() implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Channel/GetOnOffScreen";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
+        }
+    }
+
+    /** Command to set the screen rotation angle mode (0 = 0°, 1 = 90°, 2 = 180°, 3 = 270°). */
     record RotationCommand(
             @JsonProperty("Mode") int mode
     ) implements PixooCommand {
@@ -180,6 +215,265 @@ public sealed interface PixooCommand permits
         @JsonProperty("Command")
         public String command() {
             return "Device/PlayTFGif";
+        }
+    }
+
+    /** Command to synchronize the device's real-time clock. */
+    @JsonPropertyOrder({"Command", "Utc", "Time"})
+    record SetUtcCommand(
+            @JsonProperty("Utc") long utc,
+            @JsonProperty("Time") String time
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Device/SetUTC";
+        }
+    }
+
+    /** Command to get channel configuration. */
+    record GetDeviceConfigCommand() implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Channel/GetConfig";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
+        }
+    }
+
+    /** Command to get device system configuration. */
+    record GetSysConfigCommand() implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Sys/GetConf";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
+        }
+    }
+
+    /** Command to update device system configuration. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record SetSysConfigCommand(
+            @JsonProperty("Time24Flag") Integer time24Flag,
+            @JsonProperty("TemperatureMode") Integer temperatureMode,
+            @JsonProperty("DateFormat") Integer dateFormat,
+            @JsonProperty("MirrorFlag") Integer mirrorFlag,
+            @JsonProperty("AutoPowerOff") Integer autoPowerOff,
+            @JsonProperty("GyrateAngle") Integer gyrateAngle,
+            @JsonProperty("HighLight") Integer highLight,
+            @JsonProperty("Language") Integer language,
+            @JsonProperty("NotificationSound") Integer notificationSound,
+            @JsonProperty("OnOffVolume") Integer onOffVolume,
+            @JsonProperty("BluetoothAutoConnect") Integer bluetoothAutoConnect,
+            @JsonProperty("LTime") Integer lockScreenTime,
+            @JsonProperty("SProt") Integer screenProtection
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Sys/DevUpdateConf";
+        }
+    }
+
+    /** Command to set stopwatch state (0 = stop/pause, 1 = start/resume, 2 = reset). */
+    record SetStopWatchCommand(
+            @JsonProperty("Status") int status
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Tools/SetStopWatch";
+        }
+    }
+
+    /** Command to get stopwatch state. */
+    record GetStopWatchCommand() implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Tools/GetStopWatch";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
+        }
+    }
+
+    /** Command to configure and control the countdown timer. */
+    @JsonPropertyOrder({"Command", "Minute", "Second", "Status"})
+    record SetTimerCommand(
+            @JsonProperty("Minute") int minute,
+            @JsonProperty("Second") int second,
+            @JsonProperty("Status") int status
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Tools/SetTimer";
+        }
+    }
+
+    /** Command to get timer state. */
+    record GetTimerCommand() implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Tools/GetTimer";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
+        }
+    }
+
+    /** Command to configure scoreboard scores. */
+    @JsonPropertyOrder({"Command", "BlueScore", "RedScore"})
+    record SetScoreBoardCommand(
+            @JsonProperty("BlueScore") int blueScore,
+            @JsonProperty("RedScore") int redScore
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Tools/SetScoreBoard";
+        }
+    }
+
+    /** Command to get scoreboard scores. */
+    record GetScoreBoardCommand() implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Tools/GetScoreBoard";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
+        }
+    }
+
+    /** Command to control the ambient noise meter (0 = stop, 1 = start). */
+    record SetNoiseStatusCommand(
+            @JsonProperty("NoiseStatus") int noiseStatus
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Tools/SetNoiseStatus";
+        }
+    }
+
+    /** Command to get noise meter status. */
+    record GetNoiseStatusCommand() implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Tools/GetNoiseStatus";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
+        }
+    }
+
+    /** Command to set default channel on device boot. */
+    record SetStartupChannelCommand(
+            @JsonProperty("ChannelIndex") int channelIndex
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Channel/SetStartupChannel";
+        }
+    }
+
+    /** Command to get default channel on device boot. */
+    record GetStartupChannelCommand() implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Channel/GetStartupChannel";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
+        }
+    }
+
+    /** Command to select active clock face by ID. */
+    record SetClockSelectIdCommand(
+            @JsonProperty("ClockId") int clockId
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Channel/SetClockSelectId";
+        }
+    }
+
+    /** Command to get clock face information. */
+    record GetClockInfoCommand() implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Channel/GetClockInfo";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
+        }
+    }
+
+    /** Command to set custom gallery page index (0..2). */
+    record SetCustomPageIndexCommand(
+            @JsonProperty("CustomPageIndex") int customPageIndex
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Channel/SetCustomPageIndex";
+        }
+    }
+
+    /** Command to get custom gallery page index. */
+    record GetCustomPageIndexCommand() implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Channel/GetCustomPageIndex";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
+        }
+    }
+
+    /** Command to check if flash storage is full. */
+    record GetStorageStatusCommand() implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Device/GetStorageStatus";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
         }
     }
 }

@@ -43,7 +43,7 @@ public class RotationCommand implements Callable<Integer> {
 
     @Parameters(
             index = "0",
-            description = "Rotation angle: 0 (normal), 90, 180, 270"
+            description = "Rotation angle: 0 (normal), 90, 180, 270 (or mode 0..3)"
     )
     private String rotationInput;
 
@@ -53,7 +53,7 @@ public class RotationCommand implements Callable<Integer> {
         PixooClient client = parent.createClient();
         PixooResponse response = client.setRotation(rotation);
         if (response.isSuccess()) {
-            System.out.printf("Successfully set screen rotation to %d° (%s).%n", rotation.angle(), rotation.name());
+            System.out.printf("Successfully set screen rotation to %d° (mode %d, %s).%n", rotation.angle(), rotation.mode(), rotation.name());
             return 0;
         } else {
             System.err.printf("Failed to set screen rotation (Error code: %d).%n", response.errorCode());
@@ -65,11 +65,11 @@ public class RotationCommand implements Callable<Integer> {
         String normalized = input.trim().toUpperCase().replace("-", "_");
         return switch (normalized) {
             case "0", "NORMAL", "0_DEG" -> PixooRotation.NORMAL;
-            case "90", "90_CW", "ROTATE_90" -> PixooRotation.ROTATE_90;
-            case "180", "ROTATE_180" -> PixooRotation.ROTATE_180;
-            case "270", "270_CW", "ROTATE_270" -> PixooRotation.ROTATE_270;
+            case "1", "90", "90_CW", "ROTATE_90" -> PixooRotation.ROTATE_90;
+            case "2", "180", "ROTATE_180" -> PixooRotation.ROTATE_180;
+            case "3", "270", "270_CW", "ROTATE_270" -> PixooRotation.ROTATE_270;
             default -> throw new IllegalArgumentException("Invalid rotation: '" + input +
-                    "'. Valid options: 0 (normal), 90, 180, 270.");
+                    "'. Valid options: 0 (normal), 90, 180, 270 (or modes 0..3).");
         };
     }
 }

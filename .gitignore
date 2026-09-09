@@ -73,3 +73,6 @@ Thumbs.db
 
 # Generated outputs
 output/
+*.apk
+decompiled/
+

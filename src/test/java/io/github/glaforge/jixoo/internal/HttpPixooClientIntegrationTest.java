@@ -110,13 +110,13 @@ class HttpPixooClientIntegrationTest {
         assertTrue(response.isSuccess());
 
         synchronized (receivedRequests) {
-            // 1. Channel/GetAllConf (from getLightSwitch)
+            // 1. Channel/GetOnOffScreen (from isScreenOn)
             // 2. Channel/SetIndex (3)
             // 3. Draw/ResetHttpGifId
             // 4. Draw/SendHttpGif (frame 0)
             // 5. Draw/SendHttpGif (frame 1)
             assertEquals(5, receivedRequests.size());
-            assertTrue(receivedRequests.get(0).contains("Channel/GetAllConf"));
+            assertTrue(receivedRequests.get(0).contains("Channel/GetOnOffScreen"));
             assertTrue(receivedRequests.get(1).contains("Channel/SetIndex"));
             assertTrue(receivedRequests.get(2).contains("Draw/ResetHttpGifId"));
             assertTrue(receivedRequests.get(3).contains("Draw/SendHttpGif"));
@@ -171,6 +171,89 @@ class HttpPixooClientIntegrationTest {
             assertTrue(receivedRequests.get(0).contains("\"Brightness\":85"));
             assertTrue(receivedRequests.get(1).contains("Device/PlayBuzzer"));
             assertTrue(receivedRequests.get(1).contains("\"PlayTotalTime\":3000"));
+        }
+    }
+
+    @Test
+    void testRotationModeSentCorrectly() {
+        PixooClient client = PixooClient.builder()
+                .ipAddress("127.0.0.1")
+                .port(port)
+                .autoSwitchToCustomChannel(false)
+                .build();
+
+        client.setRotation(io.github.glaforge.jixoo.api.PixooRotation.ROTATE_90);
+
+        synchronized (receivedRequests) {
+            assertEquals(1, receivedRequests.size());
+            assertTrue(receivedRequests.get(0).contains("Device/SetScreenRotationAngle"));
+            assertTrue(receivedRequests.get(0).contains("\"Mode\":1"));
+        }
+    }
+
+    @Test
+    void testTimeSyncCommand() {
+        PixooClient client = PixooClient.builder()
+                .ipAddress("127.0.0.1")
+                .port(port)
+                .autoSwitchToCustomChannel(false)
+                .build();
+
+        client.syncTime(java.time.Instant.ofEpochSecond(1700000000L));
+
+        synchronized (receivedRequests) {
+            assertEquals(1, receivedRequests.size());
+            assertTrue(receivedRequests.get(0).contains("Device/SetUTC"));
+            assertTrue(receivedRequests.get(0).contains("\"Utc\":1700000000"));
+        }
+    }
+
+    @Test
+    void testHardwareToolsIntegration() {
+        PixooClient client = PixooClient.builder()
+                .ipAddress("127.0.0.1")
+                .port(port)
+                .autoSwitchToCustomChannel(false)
+                .build();
+
+        client.setStopwatch(io.github.glaforge.jixoo.model.tool.StopwatchAction.START);
+        client.setTimer(10, 0, true);
+        client.setScoreboard(14, 10);
+        client.setNoiseStatus(true);
+
+        synchronized (receivedRequests) {
+            assertEquals(4, receivedRequests.size());
+            assertTrue(receivedRequests.get(0).contains("Tools/SetStopWatch"));
+            assertTrue(receivedRequests.get(0).contains("\"Status\":1"));
+            assertTrue(receivedRequests.get(1).contains("Tools/SetTimer"));
+            assertTrue(receivedRequests.get(1).contains("\"Minute\":10"));
+            assertTrue(receivedRequests.get(2).contains("Tools/SetScoreBoard"));
+            assertTrue(receivedRequests.get(2).contains("\"BlueScore\":14"));
+            assertTrue(receivedRequests.get(3).contains("Tools/SetNoiseStatus"));
+            assertTrue(receivedRequests.get(3).contains("\"NoiseStatus\":1"));
+        }
+    }
+
+    @Test
+    void testStartupChannelAndClockSelection() {
+        PixooClient client = PixooClient.builder()
+                .ipAddress("127.0.0.1")
+                .port(port)
+                .autoSwitchToCustomChannel(false)
+                .build();
+
+        client.setStartupChannel(io.github.glaforge.jixoo.api.PixooChannel.CUSTOM);
+        client.setClockId(101);
+        client.setCustomPageIndex(2);
+
+        synchronized (receivedRequests) {
+            assertEquals(3, receivedRequests.size());
+            assertTrue(receivedRequests.get(0).contains("Channel/SetStartupChannel"));
+            assertTrue(receivedRequests.get(0).contains("\"ChannelIndex\":3"));
+            assertTrue(receivedRequests.get(1).contains("Channel/SetClockSelectId"));
+            assertTrue(receivedRequests.get(1).contains("\"ClockId\":101"));
+            assertTrue(receivedRequests.get(2).contains("Channel/SetCustomPageIndex"));
+            assertTrue(receivedRequests.get(2).contains("\"CustomPageIndex\":2"));
         }
     }
 }

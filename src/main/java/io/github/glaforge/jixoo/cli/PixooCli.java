@@ -43,7 +43,11 @@ import java.util.concurrent.Callable;
                 GifCommand.class,
                 ColorCommand.class,
                 ResetAnimationCommand.class,
-                RawCommand.class
+                RawCommand.class,
+                CloudCommand.class,
+                ToolCommand.class,
+                TimeCommand.class,
+                ConfigCommand.class
         }
 )
 public class PixooCli implements Callable<Integer> {

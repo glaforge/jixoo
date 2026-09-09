@@ -1,20 +1,22 @@
 # Divoom Pixoo 64 HTTP Protocol Specification
 
-This document provides a comprehensive, exhaustive specification of the Divoom Pixoo 64 local network HTTP API protocol.
+This document provides a comprehensive, exhaustive specification of the Divoom Pixoo 64 local network HTTP API protocol, derived from network captures and reverse engineering of the official Divoom Android client application (`com.divoom.Divoom`).
 
 ---
 
 ## 1. Overview & Transport Layer
 
-The Divoom Pixoo 64 communicates over local Wi-Fi via an embedded HTTP server (typically running on an ESP32 microcontroller).
+The Divoom Pixoo 64 communicates over local Wi-Fi via an embedded HTTP server running on an ESP32 microcontroller.
 
 ### Key Protocol Attributes
 
 * **Transport Protocol:** HTTP / 1.1 (**Strict requirement**)
 * **HTTP Method:** `POST`
-* **API Endpoint:** `http://<DEVICE_IP>:<PORT>/post`
-* **Default Port:** `80` (or `9000` on select firmware versions)
-* **Content-Type:** `application/json; charset=utf-8`
+* **API Endpoints:**
+  * Standard REST control: `http://<DEVICE_IP>:80/post`
+  * Divoom Mobile App Local API: `http://<DEVICE_IP>:9000/divoom_api`
+  * Multipart binary upload endpoint: `http://<DEVICE_IP>:9000/upload`
+* **Content-Type:** `application/json; charset=utf-8` (or `multipart/form-data` for port 9000 uploads)
 
 > [!IMPORTANT]
 > **HTTP/1.1 Enforcement & JSON Key Order Constraints:**
@@ -61,14 +63,10 @@ For commands expecting frame buffer data (such as `Draw/SendHttpGif`), the raw 1
 
 ---
 
-## 4. Command Reference
-
-All commands are submitted as JSON objects containing a `"Command"` field.
-
----
+## 4. Local Command Reference
 
 ### 4.1. `Channel/SetIndex`
-Switches the display to a predefined device channel.
+Switches the active display channel.
 
 #### Request Payload
 ```json
@@ -78,19 +76,18 @@ Switches the display to a predefined device channel.
 }
 ```
 
-#### Channel Index Values
-| `SelectIndex` | Channel Name | Description |
-| :--- | :--- | :--- |
-| `0` | Clock | Displays firmware clock faces / dials |
-| `1` | Cloud | Displays cloud/community gallery animations |
-| `2` | Visualizer | Audio spectrum / equalizer modes |
-| `3` | Custom | Displays user-defined gallery or local HTTP drawing buffer |
-| `4` | Black Screen | Turns screen display matrix off |
+#### Field Specifications
+* `SelectIndex`:
+  * `0`: Clock Faces
+  * `1`: Cloud Channel (user subscription galleries)
+  * `2`: Visualizer / Equalizer (built-in audio animations)
+  * `3`: Custom Channel (persistent playlist stored in flash)
+  * `4`: Black Screen (turns off display output while keeping Wi-Fi active)
 
 ---
 
 ### 4.2. `Draw/ResetHttpGifId`
-Resets the internal HTTP GIF animation buffer state machine on the device. Must be called before sending a new multi-frame GIF animation.
+Resets the device's internal HTTP GIF animation receiver buffer and sequence state. Must be called before transmitting a new animation sequence.
 
 #### Request Payload
 ```json
@@ -102,7 +99,7 @@ Resets the internal HTTP GIF animation buffer state machine on the device. Must 
 ---
 
 ### 4.3. `Draw/SendHttpGif`
-Sends a single frame of a GIF animation to the device's HTTP display buffer.
+Pushes a single frame of a 64x64 animation into the device's HTTP playback buffer.
 
 #### Request Payload
 ```json
@@ -113,7 +110,7 @@ Sends a single frame of a GIF animation to the device's HTTP display buffer.
   "PicOffset": 0,
   "PicID": 1001,
   "PicSpeed": 1000,
-  "PicData": "<BASE64_ENCODED_12288_BYTE_RGB_BUFFER>"
+  "PicData": "<BASE64_ENCODED_12288_BYTES>"
 }
 ```
 
@@ -158,17 +155,14 @@ Renders hardware-accelerated text on the device's overlay layer.
 * `font`: ROM font index (`0` to `7`).
 * `TextWidth`: Container width for alignment calculations (typically `64`).
 * `speed`: Scroll speed in milliseconds per step (e.g. `50` to `100`).
-* `TextString`: UTF-8 string content to render.
-* `color`: Hexadecimal color string formatted as `"#RRGGBB"`.
-* `align`: Alignment within `TextWidth`:
-  * `1`: Left
-  * `2`: Center
-  * `3`: Right
+* `TextString`: UTF-8 text string to render.
+* `color`: 6-digit hex color code (`#RRGGBB`).
+* `align`: Text alignment (`1`: Left, `2`: Center, `3`: Right).
 
 ---
 
 ### 4.5. `Draw/ClearHttpText`
-Clears all active hardware text layers from the screen.
+Clears all active native hardware text overlays.
 
 #### Request Payload
 ```json
@@ -196,7 +190,7 @@ Sets the matrix LED brightness.
 ---
 
 ### 4.7. `Channel/OnOffScreen`
-Toggles the screen backlight/LED display state.
+Controls the physical screen LED power state (standby vs active).
 
 #### Request Payload
 ```json
@@ -207,12 +201,38 @@ Toggles the screen backlight/LED display state.
 ```
 
 #### Field Specifications
-* `OnOff`: `0` for ON, `1` for OFF (standby). Note that `0` enables the screen matrix, while `1` deactivates it.
+* `OnOff`:
+  * `1`: Turn Screen **ON** (active matrix display)
+  * `0`: Turn Screen **OFF** (standby / display asleep)
+
+> [!NOTE]
+> In official Divoom Android APK sources (`WifiChannelModel.java`, `DiscoverMainFragment.java`), `1` activates the screen and `0` puts it in standby. Some legacy community reverse-engineering notes inverted this; `jixoo64` implements the official firmware convention.
 
 ---
 
-### 4.8. `Device/SetScreenRotationAngle`
-Sets the physical screen rotation angle.
+### 4.8. `Channel/GetOnOffScreen`
+Queries the current screen LED power state directly without requiring a full configuration dump.
+
+#### Request Payload
+```json
+{
+  "Command": "Channel/GetOnOffScreen"
+}
+```
+
+#### Response Payload
+```json
+{
+  "error_code": 0,
+  "OnOff": 1
+}
+```
+* `OnOff`: `1` if screen is active/ON, `0` if screen is asleep/OFF.
+
+---
+
+### 4.9. `Device/SetScreenRotationAngle`
+Sets the physical screen rotation orientation mode.
 
 #### Request Payload
 ```json
@@ -226,12 +246,339 @@ Sets the physical screen rotation angle.
 * `Mode`:
   * `0`: Normal (0°)
   * `1`: 90° Clockwise
-  * `2`: 180°
+  * `2`: 180° (Inverted)
   * `3`: 270° Clockwise
+
+> [!IMPORTANT]
+> The field name is `"Mode"` and accepts values `0..3`. Passing degree values (`90`, `180`, `270`) directly to `Device/SetScreenRotationAngle` causes firmware parse rejection. Degrees (`0, 90, 180, 270`) are used in `Sys/DevUpdateConf` under the field `"GyrateAngle"`.
 
 ---
 
-### 4.9. `Device/PlayBuzzer`
+### 4.10. `Device/SetUTC`
+Synchronizes the device's onboard real-time clock (RTC) directly with host time, bypassing cloud NTP synchronization.
+
+#### Request Payload
+```json
+{
+  "Command": "Device/SetUTC",
+  "Utc": 1700000000,
+  "Time": "2023-11-14 22:13:20"
+}
+```
+
+#### Field Specifications
+* `Utc`: Unix timestamp in epoch seconds (`long`).
+* `Time`: Local host timestamp string in `"yyyy-MM-dd HH:mm:ss"` format.
+
+---
+
+### 4.11. Hardware Tools Engine (`Tools/...`)
+
+The Pixoo 64 has a built-in suite of interactive utility tools.
+
+#### 4.11.1. Stopwatch (`Tools/SetStopWatch`, `Tools/GetStopWatch`)
+Controls the on-screen digital stopwatch display.
+
+##### Start / Stop / Reset Request
+```json
+{
+  "Command": "Tools/SetStopWatch",
+  "Status": 1
+}
+```
+* `Status`:
+  * `0`: Stop / pause
+  * `1`: Start / resume
+  * `2`: Reset to 00:00
+
+##### Query Status Request
+```json
+{
+  "Command": "Tools/GetStopWatch"
+}
+```
+##### Response
+```json
+{
+  "error_code": 0,
+  "Status": 1
+}
+```
+
+---
+
+#### 4.11.2. Countdown Timer (`Tools/SetTimer`, `Tools/GetTimer`)
+Controls the on-screen countdown timer display.
+
+##### Set & Run Timer Request
+```json
+{
+  "Command": "Tools/SetTimer",
+  "Minute": 5,
+  "Second": 30,
+  "Status": 1
+}
+```
+* `Minute`: Initial timer minutes (`0..99`).
+* `Second`: Initial timer seconds (`0..59`).
+* `Status`: `1` to start countdown, `0` to stop/pause.
+
+##### Query Timer Status Request
+```json
+{
+  "Command": "Tools/GetTimer"
+}
+```
+##### Response
+```json
+{
+  "error_code": 0,
+  "Minute": 4,
+  "Second": 12,
+  "Status": 1
+}
+```
+
+---
+
+#### 4.11.3. Scoreboard (`Tools/SetScoreBoard`, `Tools/GetScoreBoard`)
+Displays a full-screen dual-team score tracker (Blue vs Red).
+
+##### Set Scores Request
+```json
+{
+  "Command": "Tools/SetScoreBoard",
+  "BlueScore": 21,
+  "RedScore": 17
+}
+```
+* `BlueScore`: Score for the blue team (`0..999`).
+* `RedScore`: Score for the red team (`0..999`).
+
+##### Query Scores Request
+```json
+{
+  "Command": "Tools/GetScoreBoard"
+}
+```
+##### Response
+```json
+{
+  "error_code": 0,
+  "BlueScore": 21,
+  "RedScore": 17
+}
+```
+
+---
+
+#### 4.11.4. Ambient Noise Decibel Meter (`Tools/SetNoiseStatus`, `Tools/GetNoiseStatus`)
+Activates the device's internal microphone and displays real-time ambient noise decibel graphs.
+
+##### Start / Stop Request
+```json
+{
+  "Command": "Tools/SetNoiseStatus",
+  "NoiseStatus": 1
+}
+```
+* `NoiseStatus`: `1` to activate, `0` to deactivate.
+
+##### Query Status Request
+```json
+{
+  "Command": "Tools/GetNoiseStatus"
+}
+```
+##### Response
+```json
+{
+  "error_code": 0,
+  "NoiseStatus": 1
+}
+```
+
+---
+
+### 4.12. System Configuration (`Sys/...`)
+
+#### 4.12.1. `Sys/GetConf`
+Retrieves device-wide hardware, display, and regional settings.
+
+##### Request
+```json
+{
+  "Command": "Sys/GetConf"
+}
+```
+
+##### Response Fields
+```json
+{
+  "error_code": 0,
+  "Time24Flag": 1,
+  "TemperatureMode": 0,
+  "DateFormat": 1,
+  "MirrorFlag": 0,
+  "AutoPowerOff": 30,
+  "GyrateAngle": 0,
+  "HighLight": 1,
+  "WhiteBalanceR": 100,
+  "WhiteBalanceG": 100,
+  "WhiteBalanceB": 100,
+  "Language": 0,
+  "NotificationSound": 1,
+  "OnOffVolume": 10,
+  "BluetoothAutoConnect": 1,
+  "DeviceAutoUpdate": 1
+}
+```
+* `Time24Flag`: `0` for 12-hour AM/PM clock, `1` for 24-hour clock.
+* `TemperatureMode`: `0` for Celsius (°C), `1` for Fahrenheit (°F).
+* `DateFormat`: Date formatting mode index (`0`: `yyyy-MM-dd`, `1`: `dd-MM-yyyy`, `2`: `MM-dd-yyyy`, etc.).
+* `MirrorFlag`: `0` for normal display, `1` for horizontally mirrored display.
+* `AutoPowerOff`: Idle sleep timer in minutes (`0` = disabled).
+* `GyrateAngle`: Physical rotation angle (`0`, `90`, `180`, `270`).
+* `HighLight`: Highlight display mode flag.
+* `WhiteBalanceR`, `WhiteBalanceG`, `WhiteBalanceB`: RGB channel color balance calibration (`0..100`).
+* `Language`: Firmware language index.
+
+---
+
+#### 4.12.2. `Sys/DevUpdateConf` / `Sys/SetConf`
+Updates device system configuration parameters.
+
+##### Request Payload
+```json
+{
+  "Command": "Sys/DevUpdateConf",
+  "Time24Flag": 1,
+  "TemperatureMode": 0,
+  "DateFormat": 1,
+  "MirrorFlag": 0,
+  "AutoPowerOff": 0
+}
+```
+
+---
+
+### 4.13. Channel Configuration & Management
+
+#### 4.13.1. `Channel/GetConfig`
+Returns timing intervals and auto-rotation settings for channels.
+
+##### Request
+```json
+{
+  "Command": "Channel/GetConfig"
+}
+```
+
+##### Response Fields
+```json
+{
+  "error_code": 0,
+  "ChannelIndex": 0,
+  "ClockTime": 15,
+  "GalleryTime": 60,
+  "SingleGalleyTime": 10,
+  "RotationFlag": 0,
+  "StartUpClockId": 1
+}
+```
+* `ChannelIndex`: Active channel index.
+* `ClockTime`: Display duration for clock faces in seconds.
+* `GalleryTime`: Slideshow rotation interval for gallery animations in seconds.
+* `RotationFlag`: Auto-rotation between channels (`0` = off, `1` = on).
+* `StartUpClockId`: Clock face ID loaded on boot.
+
+---
+
+#### 4.13.2. `Channel/SetStartupChannel` & `Channel/GetStartupChannel`
+Configures or reads the default channel displayed when the device powers on.
+
+##### Set Startup Channel
+```json
+{
+  "Command": "Channel/SetStartupChannel",
+  "ChannelIndex": 0
+}
+```
+
+##### Get Startup Channel
+```json
+{
+  "Command": "Channel/GetStartupChannel"
+}
+```
+Response: `{"error_code": 0, "ChannelIndex": 0}`
+
+---
+
+#### 4.13.3. `Channel/SetClockSelectId` & `Channel/GetClockInfo`
+Selects an active clock face by its catalog ID or inspects the active clock.
+
+##### Select Clock Face
+```json
+{
+  "Command": "Channel/SetClockSelectId",
+  "ClockId": 42
+}
+```
+
+##### Get Clock Info
+```json
+{
+  "Command": "Channel/GetClockInfo"
+}
+```
+Response: `{"error_code": 0, "ClockId": 42, "Brightness": 100, "LcdIndex": 0, "ProduceTime": 0}`
+
+---
+
+#### 4.13.4. `Channel/SetCustomPageIndex` & `Channel/GetCustomPageIndex`
+Selects which custom channel playlist slot (`0`, `1`, or `2`) is active.
+
+##### Set Page Index
+```json
+{
+  "Command": "Channel/SetCustomPageIndex",
+  "CustomPageIndex": 1
+}
+```
+
+##### Get Page Index
+```json
+{
+  "Command": "Channel/GetCustomPageIndex"
+}
+```
+Response: `{"error_code": 0, "CustomPageIndex": 1}`
+
+---
+
+### 4.14. `Device/GetStorageStatus`
+Checks whether the onboard SPI flash memory partition for storing user pixel art and animations is full.
+
+#### Request
+```json
+{
+  "Command": "Device/GetStorageStatus"
+}
+```
+
+#### Response
+```json
+{
+  "error_code": 0,
+  "Full": 0
+}
+```
+* `Full`: `1` if onboard storage is full, `0` if storage space is available.
+
+---
+
+### 4.15. `Device/PlayBuzzer`
 Triggers a beep/tone sequence on the internal piezoelectric buzzer.
 
 #### Request Payload
@@ -251,7 +598,7 @@ Triggers a beep/tone sequence on the internal piezoelectric buzzer.
 
 ---
 
-### 4.10. `Device/PlayTFGif`
+### 4.16. `Device/PlayTFGif`
 Directs the device to download and play an animation from a remote HTTP URL.
 
 #### Request Payload
@@ -266,25 +613,6 @@ Directs the device to download and play an animation from a remote HTTP URL.
 #### Field Specifications
 * `FileType`: Set to `2` for remote URL fetching.
 * `FileName`: Direct URL to a static or animated GIF file.
-
----
-
-### 4.11. `Channel/GetAllConf`
-Fetches the device's complete hardware and user configuration state.
-
-#### Request Payload
-```json
-{
-  "Command": "Channel/GetAllConf"
-}
-```
-
-#### Response Fields (Partial List)
-* `Brightness`: Current LED brightness (`0` to `100`).
-* `LightSwitch`: Screen power state (`0` for ON, `1` for OFF / standby).
-* `RotationFlag`: Current screen rotation setting.
-* `Mac`: Device MAC address.
-* `CurClockId`: The `ClockId` of the currently configured Faces clock.
 
 ---
 
@@ -316,10 +644,10 @@ The Pixoo 64 can be discovered on a local area network using two primary methods
 
 4. **Custom Channel vs HTTP Buffer (`Channel/SetIndex: 3`):**
    Calling `Channel/SetIndex: 3` switches the device to its internal **Divoom App Custom Gallery preset** stored in flash memory. If no custom gallery is configured via the Divoom mobile app, switching to index `3` results in a **black screen**. 
-   - **The Fix:** Client applications drawing via `Draw/SendHttpGif` or `Draw/SendHttpText` should NOT automatically switch to channel `3` (`autoSwitchToCustomChannel = false`), as HTTP drawing commands render directly on top of the active display buffer without requiring a channel switch.
+   - Client applications drawing via `Draw/SendHttpGif` or `Draw/SendHttpText` do not require switching to channel `3`, as HTTP drawing commands render directly on top of the active display buffer.
 
 5. **Frame Pacing & Rate Limiting for `Draw/SendHttpGif`:**
    Because each 64x64 RGB frame is ~16KB in Base64 JSON, bursting dozens of frame payloads as fast as possible will overwhelm the embedded ESP32 web server buffer. This leads to TCP packet truncation and the device returning `"Request data illegal json"`. Client implementations **must introduce a short delay (e.g. 20ms to 30ms)** between successive HTTP POST frame uploads.
 
 6. **Maximum HTTP GIF Frame Capacity:**
-   The internal memory buffer for HTTP GIF animations on the Pixoo 64 is capped at **~60 frames**. Uploading animations with more than 60 frames can result in memory overruns and command rejections (`"Request data illegal json"`). Longer videos should be downsampled (e.g. to 5-10 fps) or split into segments before transmission.
+   The internal memory buffer for HTTP GIF animations on the Pixoo 64 is capped at **~60 frames**. Uploading animations with more than 60 frames can result in memory overruns and command rejections (`"Request data illegal json"`). Longer animations should be downsampled (e.g. to 5-10 fps) or split into segments before transmission.

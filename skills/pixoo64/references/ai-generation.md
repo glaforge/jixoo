@@ -24,7 +24,7 @@ curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?k
 
 **Display it:**
 ```bash
-pixoo-cli image -f image.png
+pixoo-cli image image.png
 ```
 
 ## 2. Generating Video Animations (Gemini Omni)

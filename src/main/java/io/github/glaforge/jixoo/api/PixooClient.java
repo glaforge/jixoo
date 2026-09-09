@@ -23,11 +23,20 @@ import io.github.glaforge.jixoo.model.PixooFrame;
 import io.github.glaforge.jixoo.model.RawRgbBuffer;
 import io.github.glaforge.jixoo.model.command.PixooCommand;
 
+import io.github.glaforge.jixoo.model.sys.ChannelConfig;
+import io.github.glaforge.jixoo.model.sys.SysConfig;
+import io.github.glaforge.jixoo.model.tool.NoiseStatus;
+import io.github.glaforge.jixoo.model.tool.ScoreboardStatus;
+import io.github.glaforge.jixoo.model.tool.StopwatchAction;
+import io.github.glaforge.jixoo.model.tool.StopwatchStatus;
+import io.github.glaforge.jixoo.model.tool.TimerStatus;
+
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.io.InputStream;
 import java.time.Duration;
+import java.time.Instant;
 
 /**
  * Main interface for interacting with the Divoom Pixoo64 display.
@@ -252,6 +261,167 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response
      */
     PixooResponse playBuzzer(int activeMs, int offMs, int totalMs);
+
+    /**
+     * Checks if the screen matrix is currently turned on.
+     *
+     * @return true if the screen is on, false if off / in standby
+     */
+    boolean isScreenOn();
+
+    /**
+     * Synchronizes the device's real-time clock to the current system time.
+     *
+     * @return the device's response
+     */
+    default PixooResponse syncTime() {
+        return syncTime(Instant.now());
+    }
+
+    /**
+     * Synchronizes the device's real-time clock to the specified instant.
+     *
+     * @param instant the timestamp to set
+     * @return the device's response
+     */
+    PixooResponse syncTime(Instant instant);
+
+    /**
+     * Retrieves the device's system configuration settings.
+     *
+     * @return the system configuration
+     */
+    SysConfig getSystemConfig();
+
+    /**
+     * Updates the device's system configuration settings.
+     *
+     * @param config the configuration settings to update
+     * @return the device's response
+     */
+    PixooResponse setSystemConfig(SysConfig config);
+
+    /**
+     * Retrieves the device's channel configuration settings.
+     *
+     * @return the channel configuration
+     */
+    ChannelConfig getChannelConfig();
+
+    /**
+     * Sets the default channel displayed when the device boots up.
+     *
+     * @param channel the startup channel
+     * @return the device's response
+     */
+    PixooResponse setStartupChannel(PixooChannel channel);
+
+    /**
+     * Retrieves the default channel displayed when the device boots up.
+     *
+     * @return the startup channel
+     */
+    PixooChannel getStartupChannel();
+
+    /**
+     * Selects an active clock face by its clock ID.
+     *
+     * @param clockId the clock face identifier
+     * @return the device's response
+     */
+    PixooResponse setClockId(int clockId);
+
+    /**
+     * Retrieves the active clock face ID.
+     *
+     * @return the clock face ID
+     */
+    int getClockId();
+
+    /**
+     * Sets the active custom channel gallery page index (0, 1, or 2).
+     *
+     * @param pageIndex the page index (0..2)
+     * @return the device's response
+     */
+    PixooResponse setCustomPageIndex(int pageIndex);
+
+    /**
+     * Retrieves the active custom channel gallery page index.
+     *
+     * @return the custom page index (0..2)
+     */
+    int getCustomPageIndex();
+
+    /**
+     * Controls the built-in stopwatch hardware tool.
+     *
+     * @param action the action to perform (START, STOP, RESET)
+     * @return the device's response
+     */
+    PixooResponse setStopwatch(StopwatchAction action);
+
+    /**
+     * Retrieves the current stopwatch state.
+     *
+     * @return stopwatch status
+     */
+    StopwatchStatus getStopwatch();
+
+    /**
+     * Configures and starts or stops the countdown timer tool.
+     *
+     * @param minute countdown minutes
+     * @param second countdown seconds
+     * @param start  true to start the countdown, false to stop/pause
+     * @return the device's response
+     */
+    PixooResponse setTimer(int minute, int second, boolean start);
+
+    /**
+     * Retrieves the countdown timer tool status.
+     *
+     * @return timer status
+     */
+    TimerStatus getTimer();
+
+    /**
+     * Sets the scores displayed on the dual-team scoreboard tool.
+     *
+     * @param blueScore blue team score (0..999)
+     * @param redScore  red team score (0..999)
+     * @return the device's response
+     */
+    PixooResponse setScoreboard(int blueScore, int redScore);
+
+    /**
+     * Retrieves the scores from the scoreboard tool.
+     *
+     * @return scoreboard status
+     */
+    ScoreboardStatus getScoreboard();
+
+    /**
+     * Starts or stops the ambient noise decibel meter tool.
+     *
+     * @param start true to start the noise meter, false to stop
+     * @return the device's response
+     */
+    PixooResponse setNoiseStatus(boolean start);
+
+    /**
+     * Retrieves the ambient noise decibel meter status.
+     *
+     * @return noise meter status
+     */
+    NoiseStatus getNoiseStatus();
+
+    /**
+     * Checks if the device's onboard flash storage is full.
+     *
+     * @return true if full, false otherwise
+     */
+    boolean isStorageFull();
 
     /**
      * Builder class for constructing {@link PixooClient} instances.

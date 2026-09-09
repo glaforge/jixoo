@@ -20,26 +20,69 @@ package io.github.glaforge.jixoo.api;
  */
 public enum PixooRotation {
     /** Normal rotation (0 degrees). */
-    NORMAL(0),
+    NORMAL(0, 0),
     /** Rotated 90 degrees clockwise. */
-    ROTATE_90(90),
+    ROTATE_90(1, 90),
     /** Rotated 180 degrees. */
-    ROTATE_180(180),
+    ROTATE_180(2, 180),
     /** Rotated 270 degrees clockwise. */
-    ROTATE_270(270);
+    ROTATE_270(3, 270);
 
+    private final int mode;
     private final int angle;
 
-    PixooRotation(int angle) {
+    PixooRotation(int mode, int angle) {
+        this.mode = mode;
         this.angle = angle;
     }
 
     /**
-     * Gets the angle of rotation in degrees.
+     * Gets the mode index (0..3) expected by the firmware.
+     *
+     * @return the mode index
+     */
+    public int mode() {
+        return mode;
+    }
+
+    /**
+     * Gets the angle of rotation in degrees (0, 90, 180, 270).
      *
      * @return the rotation angle
      */
     public int angle() {
         return angle;
+    }
+
+    /**
+     * Resolves a PixooRotation from a firmware mode index (0..3).
+     *
+     * @param mode the mode index
+     * @return the corresponding PixooRotation
+     * @throws IllegalArgumentException if mode is unrecognized
+     */
+    public static PixooRotation fromMode(int mode) {
+        for (PixooRotation r : values()) {
+            if (r.mode == mode) {
+                return r;
+            }
+        }
+        throw new IllegalArgumentException("Unknown rotation mode: " + mode + ". Valid modes are 0, 1, 2, 3.");
+    }
+
+    /**
+     * Resolves a PixooRotation from an angle in degrees.
+     *
+     * @param angle the rotation angle in degrees
+     * @return the corresponding PixooRotation
+     * @throws IllegalArgumentException if angle is unrecognized
+     */
+    public static PixooRotation fromAngle(int angle) {
+        for (PixooRotation r : values()) {
+            if (r.angle == angle) {
+                return r;
+            }
+        }
+        throw new IllegalArgumentException("Unknown rotation angle: " + angle + "°. Valid angles are 0, 90, 180, 270.");
     }
 }

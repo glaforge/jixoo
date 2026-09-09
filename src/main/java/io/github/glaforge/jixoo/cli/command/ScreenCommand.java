@@ -42,14 +42,21 @@ public class ScreenCommand implements Callable<Integer> {
 
     @Parameters(
             index = "0",
-            description = "State: 'on' (or 'true', '1') / 'off' (or 'false', '0')"
+            description = "Action: 'on' (or 'true', '1'), 'off' (or 'false', '0'), or 'status'"
     )
     private String stateInput;
 
     @Override
     public Integer call() {
-        boolean state = parseState(stateInput);
         PixooClient client = parent.createClient();
+        String normalized = stateInput.trim().toLowerCase();
+        if (normalized.equals("status") || normalized.equals("get") || normalized.equals("query")) {
+            boolean on = client.isScreenOn();
+            System.out.printf("Screen is currently %s.%n", on ? "ON" : "OFF");
+            return 0;
+        }
+
+        boolean state = parseState(stateInput);
         PixooResponse response = client.setScreenState(state);
         if (response.isSuccess()) {
             System.out.printf("Successfully turned screen %s.%n", state ? "ON" : "OFF");
