@@ -118,7 +118,7 @@ public class DivoomWeatherClient {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(Duration.ofSeconds(10))
-                .header("User-Agent", "jixoo64/0.2.0")
+                .header("User-Agent", "jixoo64/0.3.0")
                 .GET()
                 .build();
 

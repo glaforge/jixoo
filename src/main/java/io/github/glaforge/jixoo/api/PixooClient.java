@@ -345,7 +345,7 @@ public interface PixooClient extends AutoCloseable {
                     .build();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(gifUri)
-                    .header("User-Agent", "Mozilla/5.0 (compatible; Jixoo64/0.2)")
+                    .header("User-Agent", "Mozilla/5.0 (compatible; Jixoo64/0.3)")
                     .timeout(Duration.ofSeconds(15))
                     .GET()
                     .build();

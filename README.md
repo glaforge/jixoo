@@ -46,7 +46,7 @@ mvn package
 ```
 
 The executable JAR will be located at:
-`target/jixoo64-0.2.0-cli.jar`
+`target/jixoo64-0.3.0-cli.jar`
 
 ### GraalVM Native Executable Build
 
