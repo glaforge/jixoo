@@ -52,7 +52,7 @@ public class DivoomCloudClient implements AutoCloseable {
     private final Duration timeout;
 
     public DivoomCloudClient() {
-        this(Duration.ofSeconds(15));
+        this(Duration.ofSeconds(60));
     }
 
     public DivoomCloudClient(Duration timeout) {
