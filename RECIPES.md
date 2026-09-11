@@ -41,7 +41,11 @@ curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?k
 The `jixoo64` CLI automatically handles resizing the image to the 64x64 canvas.
 
 ```bash
-pixoo-cli -H 192.168.86.161 image -f image.png
+# Auto-resized and centered
+pixoo-cli -H 192.168.86.161 image image.png
+
+# Or cropped to fill 64x64 without black letterbox bars
+pixoo-cli -H 192.168.86.161 image --crop image.png
 ```
 
 ---

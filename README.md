@@ -39,15 +39,14 @@ Modern Java 21 client library and native CLI for the **Divoom Pixoo 64** 64x64 R
 Clone the repository and build with Maven:
 
 ```bash
-git clone https://github.com/divoom/jixoo64.git
-cd jixoo64
-
+git clone https://github.com/glaforge/jixoo.git
+cd jixoo
 # Build library and executable fat JAR
 mvn package
 ```
 
 The executable JAR will be located at:
-`target/jixoo64-1.0.0-SNAPSHOT-cli.jar`
+`target/jixoo64-0.2.0-cli.jar`
 
 ### GraalVM Native Executable Build
 
@@ -62,7 +61,7 @@ The standalone native binary will be generated at:
 
 ### Download Pre-compiled Binaries
 
-You can download ready-to-use native binaries for Linux, macOS (Apple Silicon), and Windows from the [GitHub Releases page](https://github.com/divoom/jixoo64/releases).
+You can download ready-to-use native binaries for Linux, macOS (Apple Silicon), and Windows from the [GitHub Releases page](https://github.com/glaforge/jixoo/releases).
 
 ---
 
@@ -243,7 +242,7 @@ pixoo-cli cloud download 987654 -o artwork.gif
 pixoo-cli cloud download 987654 --raw -o artwork.bin   # Save raw Divoom .bin asset
 
 # Stream and display community pixel art directly on your Pixoo 64!
-pixoo-cli cloud play --file-id 987654
+pixoo-cli cloud play 987654
 
 # Account management & custom channel slot flashing
 pixoo-cli cloud login -e user@example.com -p mypassword

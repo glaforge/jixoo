@@ -284,22 +284,48 @@ pixoo-cli color FF5500
 ---
 
 ### `image`
-Display a static image (PNG, JPG, BMP). Automatically scales and centers images to fit 64x64.
+Display a static image (PNG, JPG, BMP). Automatically scales and fits images to 64x64.
 ```bash
+# Auto-resized and centered with black letterbox bars if rectangular
 pixoo-cli image path/to/artwork.png
+
+# Center-cropped to square (no black bars, fills entire 64x64 canvas)
+pixoo-cli image --crop path/to/photo.jpg
+
+# Explicit scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+pixoo-cli image -s FILL_CROP path/to/photo.jpg
 ```
+
+Options:
+- `-c`, `--crop`: Crop rectangular images to fill 64x64 without letterbox bars (`FILL_CROP`).
+- `-s`, `--scale-mode=<mode>`: Scaling mode (`FIT_CENTER`, `FILL_CROP`, `STRETCH`).
 
 ---
 
 ### `gif`
-Play an animated GIF file from the local filesystem or stream from an HTTP URL.
+Play an animated GIF file from the local filesystem or stream from an HTTP/HTTPS URL.
 ```bash
-# Local GIF file
+# Local GIF file (auto-resized with black bars if rectangular)
 pixoo-cli gif --file path/to/animation.gif
 
-# Remote HTTP GIF URL
-pixoo-cli gif --url "http://example.com/animation.gif"
+# Local GIF cropped to square
+pixoo-cli gif --crop --file path/to/animation.gif
+
+# Remote HTTP/HTTPS GIF URL (auto-downloaded, scaled client-side, and streamed safely)
+pixoo-cli gif --url "https://example.com/animation.gif"
+
+# Remote GIF cropped to fill full 64x64 screen
+pixoo-cli gif --crop --url "https://example.com/animation.gif"
+
+# Direct device download (WARNING: only for small <=64x64 HTTP GIFs; large GIFs crash ESP32)
+pixoo-cli gif --direct --url "http://example.com/small.gif"
 ```
+
+Options:
+- `-c`, `--crop`: Crop rectangular GIFs to fill 64x64 without letterbox bars (`FILL_CROP`).
+- `-s`, `--scale-mode=<mode>`: Scaling mode (`FIT_CENTER`, `FILL_CROP`, `STRETCH`).
+- `--direct`: Direct device firmware to fetch URL directly via `Device/PlayTFGif` (bypasses client-side processing).
+
 
 ---
 

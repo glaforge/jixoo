@@ -722,6 +722,12 @@ Directs the device to download and play an animation from a remote HTTP URL.
 * `FileType`: Set to `2` for remote URL fetching.
 * `FileName`: Direct URL to a static or animated GIF file.
 
+> [!WARNING]
+> **Hardware OOM & Firmware Crash Hazard:**
+> The ESP32 microcontroller in the Pixoo 64 has limited SRAM (~320KB allocatable) and cannot handle on-chip decoding of high-resolution GIF files (e.g. 1400x896) or complex TLS certificate chains over HTTPS. Attempting to point `Device/PlayTFGif` to large internet GIFs causes memory allocation panics and reboots the device.
+> 
+> **Best Practice:** Client libraries should download remote GIF URLs on the host computer, decode and downscale each frame to 64x64, and stream raw 12,288-byte RGB frames using `Draw/SendHttpGif`. The `jixoo64` client and CLI implement this safe client-side pipeline by default.
+
 ---
 
 ### 4.17. Sleep Timer / Delayed Power Off (`Device/SetDelayPowerOff`, `Device/GetDelayPowerOff`)
@@ -789,6 +795,24 @@ The Pixoo 64 can be discovered on a local area network using two primary methods
 
 6. **Maximum HTTP GIF Frame Capacity:**
    The internal memory buffer for HTTP GIF animations on the Pixoo 64 is capped at **~60 frames**. Uploading animations with more than 60 frames can result in memory overruns and command rejections (`"Request data illegal json"`). Longer animations should be downsampled (e.g. to 5-10 fps) or split into segments before transmission.
+
+7. **String Error Responses vs Numeric Error Codes:**
+   When receiving invalid JSON or unknown commands, the Pixoo 64 firmware does not always return an integer error code like `{"error_code": 1}`. Instead, it frequently returns string error descriptions in the error field:
+   ```json
+   {
+     "error_code": "Request data illegal json"
+   }
+   ```
+   Client JSON parsers must implement lenient deserialization for `error_code` that accepts both numeric integers and string messages to prevent unhandled deserialization crashes.
+
+8. **Hardware Alarm Endpoint Naming:**
+   While tools endpoints follow the `Tools/...` namespace, hardware alarms use a mixed naming convention on Pixoo 64 firmware:
+   * Setting an alarm: `Device/SetAlarm` (calling `Alarm/Set` returns `"Request data illegal json"`).
+   * Querying alarms: `Device/GetAlarm` (calling `Alarm/Get` returns `"Request data illegal json"`).
+   * Deleting an alarm: `Alarm/Del` (under the `Alarm/` namespace).
+
+9. **Direct Remote GIF Playback Crash Risk:**
+   Directing the ESP32 to fetch remote GIF URLs via `Device/PlayTFGif` frequently crashes the firmware due to limited RAM when decoding large frames (e.g. 1400x896) or handling HTTPS certificate validation. Client-side downloading, scaling to 64x64, and streaming via `Draw/SendHttpGif` avoids these firmware panics completely.
 
 ---
 
@@ -919,4 +943,18 @@ Unlike conventional image formats that store pixels in consecutive scanlines fro
   $$\text{Buffer Offset} = (\text{Global } Y \times 64 + \text{Global } X) \times 3$$
 
 `jixoo64` implements a pure Java 21 decoder (`DivoomAssetDecoder`) requiring zero external dependencies to unpack and untangle these binary assets directly into displayable RGB buffers.
+
+### 9.3. Pure Java Animated GIF89a Encoder (`GifEncoder`)
+To convert decoded Divoom assets or arbitrary `PixooAnimation` objects into universally compatible animated GIF files, `jixoo64` implements a standards-compliant GIF89a encoder:
+* **Zero Native/C Dependencies:** Fully implemented in standard Java without external LZO or native image libraries.
+* **Pure Java LZW Compression:** Implements variable-length code LZW stream compression (12-bit max code table, clear code and end-of-information code handling).
+* **Median-Cut Color Quantization:** Frames containing more than 256 colors are automatically quantized down to 256 indexed palette entries using a recursive median-cut partitioning algorithm.
+* **Per-Frame Timing & Netscape Looping:** Encodes exact per-frame millisecond delays into Graphic Control Extensions and includes the Netscape 2.0 application block for continuous looping.
+
+### 9.4. Aspect Ratio Scaling Modes (`ScaleMode`)
+Because the Pixoo 64 physical display is strictly a $64 \times 64$ square matrix ($1:1$ aspect ratio), rectangular images and videos must be mapped onto the canvas:
+* `FIT_CENTER` (default): Scales the image by $\min(64 / W, 64 / H)$ to fit entirely within the canvas, padding empty borders with black pixels ($0, 0, 0$).
+* `FILL_CROP` (`--crop`): Scales the image by $\max(64 / W, 64 / H)$ so that the shorter dimension fills 64 pixels, centering the excess and cropping it away with zero letterbox bars.
+* `STRETCH`: Stretches the image directly to $64 \times 64$ without preserving the original aspect ratio.
+
 
