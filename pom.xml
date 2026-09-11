@@ -52,6 +52,13 @@
             <version>${slf4j.version}</version>
         </dependency>
 
+        <!-- Pure Java PNG decoder (zero dependencies, no AWT) -->
+        <dependency>
+            <groupId>ar.com.hjg</groupId>
+            <artifactId>pngj</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

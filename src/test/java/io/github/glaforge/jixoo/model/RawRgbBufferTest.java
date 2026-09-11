@@ -110,4 +110,33 @@ class RawRgbBufferTest {
         mutableList.add(frame);
         assertEquals(1, animation.frameCount());
     }
+
+    @Test
+    void testFromRgb() {
+        byte[] bytes = RawRgbBuffer.fromRgb(0xAA, 0xBB, 0xCC);
+        assertEquals(12288, bytes.length);
+        for (int i = 0; i < bytes.length; i += 3) {
+            assertEquals((byte) 0xAA, bytes[i]);
+            assertEquals((byte) 0xBB, bytes[i + 1]);
+            assertEquals((byte) 0xCC, bytes[i + 2]);
+        }
+    }
+
+    @Test
+    void testFromRgbInvalidRanges() {
+        assertThrows(IllegalArgumentException.class, () -> RawRgbBuffer.fromRgb(-1, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> RawRgbBuffer.fromRgb(0, 256, 0));
+        assertThrows(IllegalArgumentException.class, () -> RawRgbBuffer.fromRgb(0, 0, -10));
+    }
+
+    @Test
+    void testFromColor() {
+        byte[] bytes = RawRgbBuffer.fromColor(new Color(10, 20, 30));
+        assertEquals(12288, bytes.length);
+        assertEquals((byte) 10, bytes[0]);
+        assertEquals((byte) 20, bytes[1]);
+        assertEquals((byte) 30, bytes[2]);
+
+        assertThrows(IllegalArgumentException.class, () -> RawRgbBuffer.fromColor(null));
+    }
 }

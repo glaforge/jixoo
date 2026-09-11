@@ -67,6 +67,27 @@ public record PixooFrame(byte[] rgbData, int delayMs) {
     }
 
     /**
+     * Creates a PixooFrame from a PixooImage with a specified delay.
+     *
+     * @param image   the source image (must be 64x64)
+     * @param delayMs the duration to display this frame in milliseconds
+     * @return a new PixooFrame instance
+     */
+    public static PixooFrame fromPixooImage(io.github.glaforge.jixoo.image.PixooImage image, int delayMs) {
+        return new PixooFrame(image.toRawRgb(), delayMs);
+    }
+
+    /**
+     * Creates a PixooFrame from a PixooImage with a default delay of 100ms.
+     *
+     * @param image the source image (must be 64x64)
+     * @return a new PixooFrame instance
+     */
+    public static PixooFrame fromPixooImage(io.github.glaforge.jixoo.image.PixooImage image) {
+        return fromPixooImage(image, 100);
+    }
+
+    /**
      * Creates a PixooFrame from a BufferedImage with a specified delay.
      *
      * @param image   the source image (must be 64x64)

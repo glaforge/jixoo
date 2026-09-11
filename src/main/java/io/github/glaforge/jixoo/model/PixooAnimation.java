@@ -45,6 +45,16 @@ public record PixooAnimation(List<PixooFrame> frames) {
     }
 
     /**
+     * Creates a static PixooAnimation from a single PixooImage.
+     *
+     * @param image the image to convert to a frame
+     * @return a new PixooAnimation
+     */
+    public static PixooAnimation singleImage(io.github.glaforge.jixoo.image.PixooImage image) {
+        return singleFrame(PixooFrame.fromPixooImage(image));
+    }
+
+    /**
      * Creates a static PixooAnimation from a single image.
      *
      * @param image the image to convert to a frame

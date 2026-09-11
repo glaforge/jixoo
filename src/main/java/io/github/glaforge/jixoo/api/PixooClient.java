@@ -17,6 +17,7 @@ package io.github.glaforge.jixoo.api;
 
 import io.github.glaforge.jixoo.image.GifDecoder;
 import io.github.glaforge.jixoo.image.ImageProcessor;
+import io.github.glaforge.jixoo.image.PixooImage;
 import io.github.glaforge.jixoo.internal.HttpPixooClient;
 import io.github.glaforge.jixoo.model.PixooAnimation;
 import io.github.glaforge.jixoo.model.PixooFrame;
@@ -113,14 +114,29 @@ public interface PixooClient extends AutoCloseable {
     }
 
     /**
+     * Fills the display screen with a solid RGB color.
+     *
+     * @param r red component (0-255)
+     * @param g green component (0-255)
+     * @param b blue component (0-255)
+     * @return the device's response
+     */
+    default PixooResponse sendColor(int r, int g, int b) {
+        byte[] rgbData = RawRgbBuffer.fromRgb(r, g, b);
+        return sendFrame(new PixooFrame(rgbData, 60000));
+    }
+
+    /**
      * Fills the display screen with a solid Color.
      *
      * @param color the Color to display
      * @return the device's response
      */
     default PixooResponse sendColor(Color color) {
-        byte[] rgbData = RawRgbBuffer.fromColor(color);
-        return sendFrame(new PixooFrame(rgbData, 60000));
+        if (color == null) {
+            throw new IllegalArgumentException("Color cannot be null");
+        }
+        return sendColor(color.getRed(), color.getGreen(), color.getBlue());
     }
 
     /**
@@ -130,17 +146,18 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response
      */
     default PixooResponse sendColor(String hexColor) {
-        return sendColor(parseColor(hexColor));
+        int[] rgb = parseHexRgb(hexColor);
+        return sendColor(rgb[0], rgb[1], rgb[2]);
     }
 
     /**
-     * Parses a CSS hexadecimal color string (e.g. "#23ED23", "23ED23", "#F00", "F00") into a {@link Color}.
+     * Parses a CSS hexadecimal color string (e.g. "#23ED23", "23ED23", "#F00", "F00") into RGB components.
      *
      * @param colorStr the color string to parse
-     * @return the parsed Color
+     * @return an int array containing [red, green, blue] in the range 0-255
      * @throws IllegalArgumentException if the string format is invalid
      */
-    static Color parseColor(String colorStr) {
+    static int[] parseHexRgb(String colorStr) {
         if (colorStr == null || colorStr.isBlank()) {
             throw new IllegalArgumentException("Color string cannot be null or empty");
         }
@@ -159,10 +176,36 @@ public interface PixooClient extends AutoCloseable {
         }
         try {
             int rgb = Integer.parseInt(hex, 16);
-            return new Color(rgb);
+            return new int[] {
+                    (rgb >> 16) & 0xFF,
+                    (rgb >> 8) & 0xFF,
+                    rgb & 0xFF
+            };
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Invalid hexadecimal color: '" + colorStr + "'.", e);
         }
+    }
+
+    /**
+     * Parses a CSS hexadecimal color string (e.g. "#23ED23", "23ED23", "#F00", "F00") into a {@link Color}.
+     *
+     * @param colorStr the color string to parse
+     * @return the parsed Color
+     * @throws IllegalArgumentException if the string format is invalid
+     */
+    static Color parseColor(String colorStr) {
+        int[] rgb = parseHexRgb(colorStr);
+        return new Color(rgb[0], rgb[1], rgb[2]);
+    }
+
+    /**
+     * Resizes and sends a PixooImage to the display.
+     *
+     * @param image the image to process and send
+     * @return the device's response
+     */
+    default PixooResponse sendImage(PixooImage image) {
+        return sendAnimation(ImageProcessor.processImage(image));
     }
 
     /**
@@ -172,17 +215,17 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response
      */
     default PixooResponse sendImage(BufferedImage image) {
-        return sendAnimation(ImageProcessor.processImage(image));
+        return sendImage(PixooImage.fromBufferedImage(image));
     }
 
     /**
-     * Loads, resizes, and sends an image file from a Path to the display.
+     * Loads, resizes, and sends an image file from a Path to the display using pure-Java decoders.
      *
      * @param path the path to the image file
      * @return the device's response
      */
     default PixooResponse sendImage(Path path) {
-        return sendImage(ImageProcessor.load(path));
+        return sendImage(ImageProcessor.loadImage(path));
     }
 
     /**

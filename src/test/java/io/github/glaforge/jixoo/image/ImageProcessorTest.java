@@ -40,4 +40,27 @@ class ImageProcessorTest {
         assertEquals(1, anim.frameCount());
         assertEquals(12288, anim.frames().get(0).rgbData().length);
     }
+
+    @Test
+    void testProcessPixooImage() {
+        PixooImage img = PixooImage.of(100, 50);
+        PixooImage fitted = ImageProcessor.resizeAndFit(img, ImageProcessor.ScaleMode.FIT_CENTER);
+        assertEquals(64, fitted.width());
+        assertEquals(64, fitted.height());
+
+        PixooAnimation anim = ImageProcessor.processImage(img);
+        assertEquals(1, anim.frameCount());
+        assertEquals(12288, anim.frames().get(0).rgbData().length);
+    }
+
+    @Test
+    void testLoadImage() throws Exception {
+        java.nio.file.Path testPng = java.nio.file.Path.of("src/test/resources/test.png");
+        if (java.nio.file.Files.exists(testPng)) {
+            PixooImage img = ImageProcessor.loadImage(testPng);
+            assertNotNull(img);
+            assertEquals(64, img.width());
+            assertEquals(64, img.height());
+        }
+    }
 }

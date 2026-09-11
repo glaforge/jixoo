@@ -17,19 +17,16 @@ package io.github.glaforge.jixoo.image;
 
 import io.github.glaforge.jixoo.api.exception.PixooException;
 import io.github.glaforge.jixoo.model.PixooAnimation;
-import io.github.glaforge.jixoo.model.PixooFrame;
-import io.github.glaforge.jixoo.model.RawRgbBuffer;
 
-import javax.imageio.ImageIO;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.io.InputStream;
 
 /**
  * Image processing utilities for loading, scaling, cropping, and fitting images into 64x64.
+ * Uses pure-Java decoders (PNG, GIF, BMP) without AWT/native runtime dependencies.
  */
 public class ImageProcessor {
 
@@ -43,114 +40,170 @@ public class ImageProcessor {
     }
 
     /**
-     * Loads an image from the specified path.
+     * Loads an image from the specified path into a {@link PixooImage}.
+     * Supports PNG, GIF, and BMP natively with pure-Java decoders.
      *
      * @param path the path to load the image from
-     * @return the loaded BufferedImage
+     * @return the loaded PixooImage
      * @throws PixooException if the image cannot be loaded
      */
-    public static BufferedImage load(Path path) {
+    public static PixooImage loadImage(Path path) {
         try (InputStream is = Files.newInputStream(path)) {
-            BufferedImage image = ImageIO.read(is);
-            if (image == null) {
-                throw new PixooException("Failed to decode image from path: " + path);
-            }
-            return image;
+            return loadImage(is, path.getFileName().toString());
+        } catch (PixooException e) {
+            throw e;
         } catch (Exception e) {
             throw new PixooException("Error reading image path: " + path, e);
         }
     }
 
     /**
-     * Loads an image from the specified input stream.
+     * Loads an image from the specified input stream into a {@link PixooImage}.
      *
      * @param inputStream the stream to load the image from
-     * @return the loaded BufferedImage
+     * @return the loaded PixooImage
      * @throws PixooException if the image cannot be loaded
      */
-    public static BufferedImage load(InputStream inputStream) {
-        try {
-            BufferedImage image = ImageIO.read(inputStream);
-            if (image == null) {
-                throw new PixooException("Failed to decode image from input stream");
-            }
-            return image;
-        } catch (Exception e) {
-            throw new PixooException("Error reading image from stream", e);
-        }
+    public static PixooImage loadImage(InputStream inputStream) {
+        return loadImage(inputStream, null);
     }
 
     /**
-     * Resizes and fits an image into a 64x64 canvas using FIT_CENTER scale mode.
-     *
-     * @param input the input image
-     * @return the 64x64 processed image
+     * Loads an image from stream using file signature detection with an optional filename hint.
+     */
+    public static PixooImage loadImage(InputStream inputStream, String fileNameHint) {
+        try {
+            byte[] bytes = inputStream.readAllBytes();
+            if (bytes.length < 4) {
+                throw new PixooException("Invalid image: Stream too short");
+            }
+
+            // Detect format via magic bytes
+            if (isPng(bytes)) {
+                return PngDecoder.decode(new ByteArrayInputStream(bytes));
+            } else if (isBmp(bytes)) {
+                return BmpDecoder.decode(new ByteArrayInputStream(bytes));
+            } else if (isGif(bytes)) {
+                PixooAnimation anim = GifDecoder.decode(bytes);
+                // Return first frame of GIF as PixooImage
+                byte[] rgbData = anim.frames().get(0).rgbData();
+                return rawRgbToPixooImage(rgbData, 64, 64);
+            }
+
+            // Fallback to filename extension hint if magic bytes were ambiguous
+            if (fileNameHint != null) {
+                String lower = fileNameHint.toLowerCase();
+                if (lower.endsWith(".png")) {
+                    return PngDecoder.decode(new ByteArrayInputStream(bytes));
+                } else if (lower.endsWith(".bmp")) {
+                    return BmpDecoder.decode(new ByteArrayInputStream(bytes));
+                } else if (lower.endsWith(".gif")) {
+                    PixooAnimation anim = GifDecoder.decode(bytes);
+                    byte[] rgbData = anim.frames().get(0).rgbData();
+                    return rawRgbToPixooImage(rgbData, 64, 64);
+                }
+            }
+
+            throw new PixooException("Unsupported image format. Supported formats: PNG, GIF, BMP.");
+        } catch (PixooException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new PixooException("Failed to decode image: " + e.getMessage(), e);
+        }
+    }
+
+    private static boolean isPng(byte[] bytes) {
+        return bytes.length >= 8 &&
+                (bytes[0] & 0xFF) == 0x89 &&
+                bytes[1] == 0x50 && // 'P'
+                bytes[2] == 0x4E && // 'N'
+                bytes[3] == 0x47;   // 'G'
+    }
+
+    private static boolean isBmp(byte[] bytes) {
+        return bytes.length >= 2 && bytes[0] == 0x42 && bytes[1] == 0x4D; // 'BM'
+    }
+
+    private static boolean isGif(byte[] bytes) {
+        return bytes.length >= 3 && bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46; // 'GIF'
+    }
+
+    private static PixooImage rawRgbToPixooImage(byte[] rawRgb, int width, int height) {
+        int[] pixels = new int[width * height];
+        int src = 0;
+        for (int i = 0; i < pixels.length; i++) {
+            int r = rawRgb[src++] & 0xFF;
+            int g = rawRgb[src++] & 0xFF;
+            int b = rawRgb[src++] & 0xFF;
+            pixels[i] = 0xFF000000 | (r << 16) | (g << 8) | b;
+        }
+        return new PixooImage(width, height, pixels);
+    }
+
+    /**
+     * Resizes and fits a PixooImage into a 64x64 canvas using FIT_CENTER scale mode.
+     */
+    public static PixooImage resizeAndFit(PixooImage input) {
+        return resizeAndFit(input, ScaleMode.FIT_CENTER);
+    }
+
+    /**
+     * Resizes and fits a PixooImage into a 64x64 canvas using the specified scale mode.
+     */
+    public static PixooImage resizeAndFit(PixooImage input, ScaleMode scaleMode) {
+        return input.resizeAndFit(64, 64, scaleMode);
+    }
+
+    /**
+     * Processes a PixooImage and wraps it in a single-frame PixooAnimation.
+     */
+    public static PixooAnimation processImage(PixooImage input) {
+        return processImage(input, ScaleMode.FIT_CENTER);
+    }
+
+    /**
+     * Processes a PixooImage with the specified scale mode and wraps it in a single-frame PixooAnimation.
+     */
+    public static PixooAnimation processImage(PixooImage input, ScaleMode scaleMode) {
+        PixooImage processed = resizeAndFit(input, scaleMode);
+        return PixooAnimation.singleImage(processed);
+    }
+
+    // --- Backward Compatibility methods for JVM users using BufferedImage ---
+
+    /**
+     * Loads a BufferedImage from path (convenience method for JVM environments).
+     */
+    public static BufferedImage load(Path path) {
+        return loadImage(path).toBufferedImage();
+    }
+
+    /**
+     * Loads a BufferedImage from input stream (convenience method for JVM environments).
+     */
+    public static BufferedImage load(InputStream inputStream) {
+        return loadImage(inputStream).toBufferedImage();
+    }
+
+    /**
+     * Resizes and fits a BufferedImage using FIT_CENTER.
      */
     public static BufferedImage resizeAndFit(BufferedImage input) {
         return resizeAndFit(input, ScaleMode.FIT_CENTER);
     }
 
     /**
-     * Resizes and fits an image into a 64x64 canvas using the specified scale mode.
-     *
-     * @param input     the input image
-     * @param scaleMode the scaling strategy to use
-     * @return the 64x64 processed image
+     * Resizes and fits a BufferedImage using the specified scale mode with pure-Java interpolation.
      */
     public static BufferedImage resizeAndFit(BufferedImage input, ScaleMode scaleMode) {
-        if (input.getWidth() == RawRgbBuffer.WIDTH && input.getHeight() == RawRgbBuffer.HEIGHT) {
-            return ensureType(input);
-        }
-
-        BufferedImage target = new BufferedImage(RawRgbBuffer.WIDTH, RawRgbBuffer.HEIGHT, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = target.createGraphics();
-        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-
-        int srcW = input.getWidth();
-        int srcH = input.getHeight();
-
-        switch (scaleMode) {
-            case STRETCH -> g2d.drawImage(input, 0, 0, RawRgbBuffer.WIDTH, RawRgbBuffer.HEIGHT, null);
-            case FIT_CENTER -> {
-                double scale = Math.min((double) RawRgbBuffer.WIDTH / srcW, (double) RawRgbBuffer.HEIGHT / srcH);
-                int drawW = (int) Math.round(srcW * scale);
-                int drawH = (int) Math.round(srcH * scale);
-                int x = (RawRgbBuffer.WIDTH - drawW) / 2;
-                int y = (RawRgbBuffer.HEIGHT - drawH) / 2;
-                g2d.drawImage(input, x, y, drawW, drawH, null);
-            }
-            case FILL_CROP -> {
-                double scale = Math.max((double) RawRgbBuffer.WIDTH / srcW, (double) RawRgbBuffer.HEIGHT / srcH);
-                int drawW = (int) Math.round(srcW * scale);
-                int drawH = (int) Math.round(srcH * scale);
-                int x = (RawRgbBuffer.WIDTH - drawW) / 2;
-                int y = (RawRgbBuffer.HEIGHT - drawH) / 2;
-                g2d.drawImage(input, x, y, drawW, drawH, null);
-            }
-        }
-        g2d.dispose();
-        return target;
+        PixooImage pix = PixooImage.fromBufferedImage(input);
+        return pix.resizeAndFit(64, 64, scaleMode).toBufferedImage();
     }
 
     /**
-     * Processes an image and wraps it in a single-frame PixooAnimation.
-     *
-     * @param input the input image
-     * @return a single-frame animation containing the processed image
+     * Processes a BufferedImage into a single-frame PixooAnimation.
      */
     public static PixooAnimation processImage(BufferedImage input) {
-        BufferedImage processed = resizeAndFit(input);
-        return PixooAnimation.singleImage(processed);
-    }
-
-    private static BufferedImage ensureType(BufferedImage input) {
-        if (input.getType() == BufferedImage.TYPE_INT_RGB) {
-            return input;
-        }
-        BufferedImage copy = new BufferedImage(input.getWidth(), input.getHeight(), BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = copy.createGraphics();
-        g2d.drawImage(input, 0, 0, null);
-        g2d.dispose();
-        return copy;
+        return processImage(PixooImage.fromBufferedImage(input));
     }
 }

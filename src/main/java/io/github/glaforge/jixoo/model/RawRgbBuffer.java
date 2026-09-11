@@ -34,6 +34,33 @@ public final class RawRgbBuffer {
     private RawRgbBuffer() {}
 
     /**
+     * Creates a raw 12,288-byte RGB pixel buffer filled entirely with the specified RGB values.
+     *
+     * @param r red component (0-255)
+     * @param g green component (0-255)
+     * @param b blue component (0-255)
+     * @return 12,288-byte array containing RGB sequence
+     * @throws IllegalArgumentException if r, g, or b are outside the range 0-255
+     */
+    public static byte[] fromRgb(int r, int g, int b) {
+        if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+            throw new IllegalArgumentException(
+                    "RGB components must be between 0 and 255. Given: (" + r + ", " + g + ", " + b + ")"
+            );
+        }
+        byte rb = (byte) r;
+        byte gb = (byte) g;
+        byte bb = (byte) b;
+        byte[] rawRgb = new byte[TOTAL_BYTES];
+        for (int i = 0; i < TOTAL_BYTES; i += 3) {
+            rawRgb[i] = rb;
+            rawRgb[i + 1] = gb;
+            rawRgb[i + 2] = bb;
+        }
+        return rawRgb;
+    }
+
+    /**
      * Creates a raw 12,288-byte RGB pixel buffer filled entirely with the specified Color.
      *
      * @param color the Color to fill the buffer with
@@ -43,16 +70,7 @@ public final class RawRgbBuffer {
         if (color == null) {
             throw new IllegalArgumentException("Color cannot be null");
         }
-        byte r = (byte) color.getRed();
-        byte g = (byte) color.getGreen();
-        byte b = (byte) color.getBlue();
-        byte[] rawRgb = new byte[TOTAL_BYTES];
-        for (int i = 0; i < TOTAL_BYTES; i += 3) {
-            rawRgb[i] = r;
-            rawRgb[i + 1] = g;
-            rawRgb[i + 2] = b;
-        }
-        return rawRgb;
+        return fromRgb(color.getRed(), color.getGreen(), color.getBlue());
     }
 
     /**

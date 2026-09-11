@@ -256,4 +256,51 @@ class HttpPixooClientIntegrationTest {
             assertTrue(receivedRequests.get(2).contains("\"CustomPageIndex\":2"));
         }
     }
+
+    @Test
+    void testSendColorVariants() {
+        PixooClient client = PixooClient.builder()
+                .ipAddress("127.0.0.1")
+                .port(port)
+                .autoSwitchToCustomChannel(false)
+                .build();
+
+        PixooResponse resp1 = client.sendColor(255, 0, 128);
+        assertTrue(resp1.isSuccess());
+
+        PixooResponse resp2 = client.sendColor("#AABBCC");
+        assertTrue(resp2.isSuccess());
+
+        PixooResponse resp3 = client.sendColor("112233");
+        assertTrue(resp3.isSuccess());
+
+        PixooResponse resp4 = client.sendColor("#F00");
+        assertTrue(resp4.isSuccess());
+
+        PixooResponse resp5 = client.sendColor(new java.awt.Color(50, 100, 150));
+        assertTrue(resp5.isSuccess());
+
+        synchronized (receivedRequests) {
+            assertEquals(10, receivedRequests.size());
+            long resetCount = receivedRequests.stream().filter(req -> req.contains("Draw/ResetHttpGifId")).count();
+            long sendGifCount = receivedRequests.stream().filter(req -> req.contains("Draw/SendHttpGif")).count();
+            assertEquals(5, resetCount);
+            assertEquals(5, sendGifCount);
+        }
+    }
+
+    @Test
+    void testParseHexRgb() {
+        assertArrayEquals(new int[]{170, 187, 204}, PixooClient.parseHexRgb("#AABBCC"));
+        assertArrayEquals(new int[]{170, 187, 204}, PixooClient.parseHexRgb("AABBCC"));
+        assertArrayEquals(new int[]{255, 0, 0}, PixooClient.parseHexRgb("#F00"));
+        assertArrayEquals(new int[]{255, 0, 0}, PixooClient.parseHexRgb("F00"));
+        assertArrayEquals(new int[]{0, 255, 0}, PixooClient.parseHexRgb("#0F0"));
+
+        assertThrows(IllegalArgumentException.class, () -> PixooClient.parseHexRgb(null));
+        assertThrows(IllegalArgumentException.class, () -> PixooClient.parseHexRgb(""));
+        assertThrows(IllegalArgumentException.class, () -> PixooClient.parseHexRgb("blue"));
+        assertThrows(IllegalArgumentException.class, () -> PixooClient.parseHexRgb("#ZZZZZZ"));
+        assertThrows(IllegalArgumentException.class, () -> PixooClient.parseHexRgb("#1234"));
+    }
 }
