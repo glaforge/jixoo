@@ -11,9 +11,15 @@ Modern Java 21 client library and native CLI for the **Divoom Pixoo 64** 64x64 R
 - ⚡ **GraalVM 25 Native Image Support**: Instantaneous (<5ms startup) native executable support (`mvn package -Pnative`).
 - 🔍 **Subnet Device Discovery**: Auto-discover active Pixoo 64 devices on your local network using UDP broadcast and ARP scanning.
 - 🖼️ **Image & Animated GIF Processing**: Load PNG, JPG, BMP, or animated GIF files from disk or stream remote GIF URLs directly. Includes smart aspect-ratio preserving scaling and letterboxing for 64x64 matrix pixels.
+- 🧩 **Pure Java 21 Divoom Asset & Animated GIF Codec**: Decode native 16x16 tiled Divoom binary assets (`.bin`, formats 26/18) and encode multi-frame animated GIF89a files with zero external C/LZO libraries!
+
 - ✍️ **Hardware Text Layer Rendering**: Multi-slot text overlay engine supporting ROM fonts, scroll direction (static, left, right), speed, positioning, hexadecimal colors, and alignments.
-- ⏱️ **Interactive Hardware Tools Engine**: Control on-screen Stopwatch, Countdown Timer, Scoreboard (Blue vs Red), and real-time Ambient Noise Decibel Meter.
+- ⏱️ **Interactive Hardware Tools Engine**: Control on-screen Stopwatch, Countdown Timer, Scoreboard (Blue vs Red), Ambient Noise Decibel Meter, **Pomodoro Timer**, **Hardware Alarms**, and **Memorial Day Countdowns**.
+- 💤 **Screen Sleep Timer**: Configure delayed automatic power off (`screen sleep`).
 - 🕒 **Direct RTC Clock Synchronization**: Synchronize device hardware real-time clock without relying on external cloud NTP.
+- ⛅ **Zero-Auth Weather Service**: Live weather conditions and 5-day forecasts via Divoom's global weather proxy without needing API keys.
+- 🌐 **Cloud Pixel Art Discovery & Playback**: Search public galleries, view artist profiles, browse trending artworks, download assets, and stream cloud pixel art directly to your Pixoo 64.
+- 🎨 **Clock Face Store**: Discover and switch top downloaded clock dials from the Divoom store catalog.
 - ⚙️ **System Configuration Management**: Configure 12/24-hour time format, Celsius/Fahrenheit units, date formatting, display mirroring, auto-sleep timers, and startup channels.
 - ☁️ **Divoom Cloud & Persistent Custom Channels**: Direct integration with Divoom Cloud API for persistent flash playlist storage and gallery publishing.
 - 🎛️ **Full Device Control**: Channel switching, LED matrix brightness, screen power toggle and status query, rotation angle modes, buzzer alarm tone patterns, and raw JSON execution.
@@ -91,6 +97,8 @@ pixoo-cli channel startup custom        # Set startup channel to Custom
 # Select clock face by ID
 pixoo-cli channel clock-face            # Query active clock ID
 pixoo-cli channel clock-face 42         # Select clock face 42
+pixoo-cli channel clock-face top        # View top trending clock faces from Divoom store
+pixoo-cli channel clock-face browse     # Browse clock faces by category
 
 # Switch custom gallery page slot (0, 1, 2)
 pixoo-cli channel page                  # Query active page slot
@@ -105,11 +113,14 @@ pixoo-cli channel config
 pixoo-cli brightness 80
 ```
 
-#### 4. Power Screen Display On/Off & Status
+#### 4. Power Screen Display On/Off, Status & Sleep Timer
 ```bash
-pixoo-cli screen status   # Query if screen is ON or OFF
-pixoo-cli screen on       # Turn screen ON
-pixoo-cli screen off      # Turn screen OFF / Standby
+pixoo-cli screen status         # Query if screen is ON or OFF
+pixoo-cli screen on             # Turn screen ON
+pixoo-cli screen off            # Turn screen OFF / Standby
+pixoo-cli screen sleep 30       # Auto-power off screen in 30 minutes
+pixoo-cli screen sleep status   # Check remaining sleep timer minutes
+pixoo-cli screen sleep cancel   # Cancel active sleep timer
 ```
 
 #### 5. Screen Rotation
@@ -141,6 +152,19 @@ pixoo-cli tool scoreboard get
 pixoo-cli tool noise start
 pixoo-cli tool noise stop
 pixoo-cli tool noise status
+
+# Pomodoro Focus Timer
+pixoo-cli tool pomodoro start --work 25 --break 5
+pixoo-cli tool pomodoro stop
+
+# Hardware Alarms
+pixoo-cli tool alarm list
+pixoo-cli tool alarm set --id 1 --time 07:30 --days 1,2,3,4,5
+pixoo-cli tool alarm delete 1
+
+# Memorial Day & Event Countdowns
+pixoo-cli tool countdown set --id 1 --month 12 --day 25 --name "Christmas"
+pixoo-cli tool countdown delete 1
 ```
 
 #### 7. Clock Synchronization (`time`)
@@ -149,7 +173,17 @@ pixoo-cli tool noise status
 pixoo-cli time sync
 ```
 
-#### 8. System Configuration (`config`)
+#### 8. Live Weather & Forecasts (`weather`)
+Access live weather conditions and 5-day forecasts via Divoom's global weather proxy without requiring API keys:
+```bash
+# Current weather by coordinates (defaults to Paris if omitted)
+pixoo-cli weather current --lat 48.8566 --lon 2.3522
+
+# 5-day forecast
+pixoo-cli weather forecast --lat 48.8566 --lon 2.3522
+```
+
+#### 9. System Configuration (`config`)
 ```bash
 # Query system configuration
 pixoo-cli config get
@@ -159,7 +193,7 @@ pixoo-cli config set --time-format 24 --temp-unit c --auto-off 0
 pixoo-cli config set --mirror off --date-format 1
 ```
 
-#### 9. Text Layer Rendering
+#### 10. Text Layer Rendering
 ```bash
 # Render scrolling text
 pixoo-cli text send -t "Hello World!" -x 0 -y 24 -c "#00FFFF" --dir left -s 50 -a center
@@ -168,13 +202,13 @@ pixoo-cli text send -t "Hello World!" -x 0 -y 24 -c "#00FFFF" --dir left -s 50 -
 pixoo-cli text clear
 ```
 
-#### 10. Display Solid Plain Colors
+#### 11. Display Solid Plain Colors
 ```bash
 pixoo-cli color #23ED23
 pixoo-cli color 23ED23
 ```
 
-#### 11. Display Static Images & Animated GIFs
+#### 12. Display Static Images & Animated GIFs
 ```bash
 # Display image file (auto-resized and centered)
 pixoo-cli image path/to/artwork.png
@@ -186,27 +220,38 @@ pixoo-cli gif --file path/to/animation.gif
 pixoo-cli gif --url "http://example.com/animation.gif"
 ```
 
-#### 12. Divoom Cloud & Custom Channels (`cloud`)
+#### 13. Divoom Cloud Discovery, Community Art & Playback (`cloud`)
 ```bash
-# Log in to Divoom Cloud account
+# Browse community pixel art (POPULAR or NEWEST)
+pixoo-cli cloud browse --sort POPULAR --start 1 --end 20
+
+# Search public gallery by keyword
+pixoo-cli cloud search "cyberpunk" --start 1 --end 20
+
+
+# Discover artist portfolio and bio
+pixoo-cli cloud artist 12345678 --profile
+
+# Download a cloud pixel art asset (converts to animated GIF by default)
+pixoo-cli cloud download 987654 -o artwork.gif
+pixoo-cli cloud download 987654 --raw -o artwork.bin   # Save raw Divoom .bin asset
+
+# Stream and display community pixel art directly on your Pixoo 64!
+pixoo-cli cloud play --file-id 987654
+
+# Account management & custom channel slot flashing
 pixoo-cli cloud login -e user@example.com -p mypassword
-
-# List bound hardware devices
 pixoo-cli cloud devices
-
-# Upload animation to persistent Custom Channel slot (slot 0..2)
 pixoo-cli cloud channel --file animation.gif --slot 0
-
-# Publish artwork to Divoom Cloud Gallery
 pixoo-cli cloud gallery --file artwork.gif --name "Pixel Art" --desc "Created with jixoo64"
 ```
 
-#### 13. Trigger Buzzer Sound Pattern
+#### 14. Trigger Buzzer Sound Pattern
 ```bash
 pixoo-cli buzzer --active-ms 500 --off-ms 500 --total-ms 3000
 ```
 
-#### 14. Execute Raw JSON Protocol Commands
+#### 15. Execute Raw JSON Protocol Commands
 ```bash
 pixoo-cli raw --json '{"Command": "Channel/SetIndex", "SelectIndex": 0}'
 ```
@@ -221,6 +266,8 @@ Include `jixoo64` in your project dependencies.
 
 ```java
 import io.github.glaforge.jixoo.api.*;
+import io.github.glaforge.jixoo.cloud.DivoomCloudClient;
+import io.github.glaforge.jixoo.weather.DivoomWeatherClient;
 import io.github.glaforge.jixoo.model.tool.StopwatchAction;
 
 import java.nio.file.Path;
@@ -239,27 +286,41 @@ public class PixooExample {
             // 3. Adjust LED brightness
             client.setBrightness(75);
 
-            // 4. Display an image file
+            // 4. Set a 30-minute sleep timer
+            client.setSleepTimer(30);
+
+            // 5. Start a 25/5 Pomodoro focus session
+            client.startPomodoro(25, 5);
+
+            // 6. Display an image file
             client.sendImage(Path.of("artwork.png"));
 
-            // 5. Send hardware text overlay
+            // 7. Send hardware text overlay
             PixooText text = PixooText.builder()
                     .textId(1)
                     .position(0, 24)
-                    .text("ALERT!")
-                    .color("#FF0000")
+                    .text("FOCUS!")
+                    .color("#00FFFF")
                     .scrollLeft()
                     .speed(50)
                     .alignCenter()
                     .build();
             client.sendText(text);
-
-            // 6. Control hardware stopwatch
-            client.setStopwatch(StopwatchAction.START);
         }
+
+        // Fetch live weather without API keys
+        var weatherClient = new DivoomWeatherClient();
+        var weather = weatherClient.getCurrentWeather(48.8566, 2.3522);
+        System.out.println("Current temp: " + weather.temperature() + "°C, " + weather.description());
+
+        // Browse community pixel art
+        var cloudClient = new DivoomCloudClient();
+        var gallery = cloudClient.browseGallery(io.github.glaforge.jixoo.cloud.model.GallerySort.HOT, 0, 1, 5);
+        gallery.files().forEach(item -> System.out.println(item.title() + " by " + item.author()));
     }
 }
 ```
+
 
 ### Auto-Discovering Devices in Java
 

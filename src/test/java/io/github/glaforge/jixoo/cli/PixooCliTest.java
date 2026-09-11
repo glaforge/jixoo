@@ -219,7 +219,15 @@ class PixooCliTest {
         assertTrue(output.contains("devices"));
         assertTrue(output.contains("channel"));
         assertTrue(output.contains("gallery"));
+        assertTrue(output.contains("browse"));
+        assertTrue(output.contains("search"));
+        assertTrue(output.contains("artist"));
+        assertTrue(output.contains("uploads"));
+        assertTrue(output.contains("likes"));
+        assertTrue(output.contains("download"));
+        assertTrue(output.contains("play"));
     }
+
 
     @Test
     @DisplayName("Cloud logout subcommand help should show options")
@@ -252,6 +260,23 @@ class PixooCliTest {
         assertTrue(output.contains("--slot"));
         assertTrue(output.contains("--logout"));
     }
+
+    @Test
+    @DisplayName("Cloud download subcommand help should show options including --raw")
+    void testCloudDownloadHelp() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
+
+        int exitCode = cmd.execute("cloud", "download", "--help");
+        assertEquals(0, exitCode);
+        String output = out.toString();
+        assertTrue(output.contains("--output"));
+        assertTrue(output.contains("--raw"));
+    }
+
 
     @Test
     @DisplayName("Tool subcommand help should list all hardware tools")
@@ -358,4 +383,62 @@ class PixooCliTest {
         assertEquals(0, cmd.execute("channel", "page", "--help"));
         assertTrue(out.toString().contains("page"));
     }
+
+    @Test
+    @DisplayName("Screen sleep subcommand help should show sleep duration options")
+    void testScreenSleepHelp() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
+
+        assertEquals(0, cmd.execute("screen", "sleep", "--help"));
+        String output = out.toString();
+        assertTrue(output.contains("sleep"));
+        assertTrue(output.contains("status"));
+        assertTrue(output.contains("cancel"));
+    }
+
+    @Test
+    @DisplayName("Tool pomodoro, alarm, and countdown subcommands help")
+    void testToolNewSubcommandsHelp() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
+
+        assertEquals(0, cmd.execute("tool", "pomodoro", "--help"));
+        assertTrue(out.toString().contains("start"));
+        assertTrue(out.toString().contains("set"));
+
+        out.getBuffer().setLength(0);
+        assertEquals(0, cmd.execute("tool", "alarm", "--help"));
+        assertTrue(out.toString().contains("list"));
+        assertTrue(out.toString().contains("set"));
+        assertTrue(out.toString().contains("delete"));
+
+        out.getBuffer().setLength(0);
+        assertEquals(0, cmd.execute("tool", "countdown", "--help"));
+        assertTrue(out.toString().contains("set"));
+        assertTrue(out.toString().contains("delete"));
+    }
+
+    @Test
+    @DisplayName("Weather command help should show current and forecast")
+    void testWeatherHelp() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter out = new StringWriter();
+        cmd.setOut(new PrintWriter(out));
+
+        assertEquals(0, cmd.execute("weather", "--help"));
+        String output = out.toString();
+        assertTrue(output.contains("current"));
+        assertTrue(output.contains("forecast"));
+    }
 }
+
+

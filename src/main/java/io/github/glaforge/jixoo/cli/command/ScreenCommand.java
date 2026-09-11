@@ -30,7 +30,10 @@ import java.util.concurrent.Callable;
  */
 @Command(
         name = "screen",
-        description = "Turn screen display on or off."
+        description = "Turn screen display on or off, or manage auto sleep timer.",
+        subcommands = {
+                ScreenCommand.SleepSubcommand.class
+        }
 )
 public class ScreenCommand implements Callable<Integer> {
 
@@ -42,12 +45,18 @@ public class ScreenCommand implements Callable<Integer> {
 
     @Parameters(
             index = "0",
+            arity = "0..1",
             description = "Action: 'on' (or 'true', '1'), 'off' (or 'false', '0'), or 'status'"
     )
     private String stateInput;
 
     @Override
     public Integer call() {
+        if (stateInput == null || stateInput.isBlank()) {
+            picocli.CommandLine.usage(this, System.out);
+            return 0;
+        }
+
         PixooClient client = parent.createClient();
         String normalized = stateInput.trim().toLowerCase();
         if (normalized.equals("status") || normalized.equals("get") || normalized.equals("query")) {
@@ -74,5 +83,60 @@ public class ScreenCommand implements Callable<Integer> {
             case "off", "false", "0", "disable" -> false;
             default -> throw new IllegalArgumentException("Invalid screen state: '" + input + "'. Use 'on' or 'off'.");
         };
+    }
+
+    @Command(name = "sleep", description = "Get, set, or cancel the auto sleep timer (turn off screen after N minutes).")
+    public static class SleepSubcommand implements Callable<Integer> {
+        @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+        private boolean helpRequested;
+
+        @ParentCommand
+        private ScreenCommand parent;
+
+        @Parameters(
+                index = "0",
+                arity = "0..1",
+                description = "Sleep timer in minutes (0 or 'cancel' to disable). If omitted or 'status', queries current timer."
+        )
+        private String minutesInput;
+
+        @Override
+        public Integer call() {
+            PixooClient client = parent.parent.createClient();
+            if (minutesInput == null || minutesInput.isBlank() || minutesInput.equalsIgnoreCase("status") || minutesInput.equalsIgnoreCase("get")) {
+                int minutes = client.getSleepTimer();
+                if (minutes > 0) {
+                    System.out.printf("Auto sleep timer active: screen will turn off in %d minute(s).%n", minutes);
+                } else {
+                    System.out.println("Auto sleep timer is disabled.");
+                }
+                return 0;
+            }
+
+            int minutes;
+            if (minutesInput.equalsIgnoreCase("cancel") || minutesInput.equalsIgnoreCase("off") || minutesInput.equalsIgnoreCase("disable")) {
+                minutes = 0;
+            } else {
+                try {
+                    minutes = Integer.parseInt(minutesInput);
+                } catch (NumberFormatException e) {
+                    System.err.printf("Invalid minutes value: '%s'. Enter a number of minutes or 'cancel'.%n", minutesInput);
+                    return 1;
+                }
+            }
+
+            PixooResponse resp = client.setSleepTimer(minutes);
+            if (resp.isSuccess()) {
+                if (minutes > 0) {
+                    System.out.printf("Successfully set auto sleep timer to %d minute(s).%n", minutes);
+                } else {
+                    System.out.println("Successfully cancelled auto sleep timer.");
+                }
+                return 0;
+            } else {
+                System.err.printf("Failed to set sleep timer (Error code: %d)%n", resp.errorCode());
+                return 1;
+            }
+        }
     }
 }

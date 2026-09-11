@@ -46,6 +46,7 @@ public class DivoomCloudClient implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(DivoomCloudClient.class);
     private static final String CLOUD_BASE_URL = "https://appin.divoom-gz.com/";
+    private static final String CDN_BASE_URL = "https://fin.divoom-gz.com/";
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final HttpClient httpClient;
@@ -445,6 +446,221 @@ public class DivoomCloudClient implements AutoCloseable {
             }
         }
         return null;
+    }
+
+    /**
+     * Downloads a binary pixel art asset directly from the Divoom CDN.
+     *
+     * @param fileId the FileId (e.g. {@code group1/M00/...})
+     * @return raw binary container bytes
+     */
+    public byte[] downloadAsset(String fileId) {
+        if (fileId == null || fileId.isBlank()) {
+            throw new IllegalArgumentException("fileId cannot be null or blank");
+        }
+        String cleanId = fileId.startsWith("/") ? fileId.substring(1) : fileId;
+        String url = CDN_BASE_URL + cleanId;
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(timeout)
+                    .header("User-Agent", "Aurabox/3.1.10 (iPad; iOS 14.8)")
+                    .GET()
+                    .build();
+            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() != 200) {
+                throw new PixooException("Failed to download asset from CDN: HTTP " + response.statusCode() + " for " + url);
+            }
+            return response.body();
+        } catch (PixooException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new PixooException("Error downloading asset " + fileId + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Browses curated community 64x64 pixel art in the Divoom Public Gallery.
+     * This endpoint does not require user authentication.
+     *
+     * @param classify category identifier (0=all, 1=pixel art, 2=celebrity, 3=anime/games, etc.)
+     * @param sort     sorting order (POPULAR or NEWEST)
+     * @param startNum pagination start offset (1-based)
+     * @param endNum   pagination end offset (inclusive)
+     * @return gallery listing response
+     */
+    public CloudGalleryResponse browseGallery(int classify, GallerySort sort, int startNum, int endNum) {
+        int actualStart = Math.max(1, startNum);
+        int actualEnd = Math.max(actualStart, endNum);
+        Map<String, Object> body = Map.of(
+                "Classify", classify,
+                "FileSize", 4, // 64x64 resolution
+                "FileSort", sort != null ? sort.getValue() : 1,
+                "StartNum", actualStart,
+                "EndNum", actualEnd,
+                "FileType", 5,
+                "RefreshIndex", 0,
+                "Version", 19,
+                "UserId", 0,
+                "Token", 0
+        );
+        return postJson("GetCategoryFileListV2", body, CloudGalleryResponse.class);
+    }
+
+    /**
+     * Searches community 64x64 pixel art by keyword.
+     * This endpoint does not require user authentication.
+     *
+     * @param keyword  search query string
+     * @param startNum pagination start offset (1-based)
+     * @param endNum   pagination end offset (inclusive)
+     * @return gallery search results
+     */
+    public CloudGalleryResponse searchGallery(String keyword, int startNum, int endNum) {
+        int actualStart = Math.max(1, startNum);
+        int actualEnd = Math.max(actualStart, endNum);
+        Map<String, Object> body = Map.of(
+                "Keywords", keyword,
+                "KeywordsEn", keyword,
+                "FileSize", 4,
+                "StartNum", actualStart,
+                "EndNum", actualEnd,
+                "FileType", 5,
+                "SortType", 0,
+                "Version", 19,
+                "UserId", 0,
+                "Token", 0
+        );
+        return postJson("SearchGalleryV3", body, CloudGalleryResponse.class);
+    }
+
+    /**
+     * Retrieves all public artworks uploaded by an artist / creator.
+     * This endpoint does not require user authentication.
+     *
+     * @param artistUserId user ID of the creator
+     * @param startNum     pagination start offset (1-based)
+     * @param endNum       pagination end offset (inclusive)
+     * @return creator's public artwork gallery
+     */
+    public CloudGalleryResponse getArtistArtworks(long artistUserId, int startNum, int endNum) {
+        int actualStart = Math.max(1, startNum);
+        int actualEnd = Math.max(actualStart, endNum);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("SomeOneUserId", artistUserId);
+        body.put("ShowAllFlag", 1);
+        body.put("Classify", 0);
+        body.put("FileSize", 127);
+        body.put("FileType", 5);
+        body.put("FileSort", 0);
+        body.put("RefreshIndex", 0);
+        body.put("Version", 19);
+        body.put("StartNum", actualStart);
+        body.put("EndNum", actualEnd);
+        body.put("UserId", 0);
+        body.put("Token", 0);
+        return postJson("GetSomeoneListV3", body, CloudGalleryResponse.class);
+    }
+
+    /**
+     * Retrieves public profile metadata and follower statistics for a creator.
+     *
+     * @param artistUserId user ID of the creator
+     * @return creator profile
+     */
+    public ArtistProfile getArtistProfile(long artistUserId) {
+        Map<String, Object> body = Map.of(
+                "SomeOneUserId", artistUserId,
+                "UserId", 0,
+                "Token", 0
+        );
+        return postJson("GetSomeoneInfoV2", body, ArtistProfile.class);
+    }
+
+    /**
+     * Retrieves the artworks uploaded by the authenticated user.
+     *
+     * @param session  the active cloud session
+     * @param startNum pagination start offset (1-based)
+     * @param endNum   pagination end offset (inclusive)
+     * @return user's uploaded artworks
+     */
+    public CloudGalleryResponse getMyUploads(DivoomCloudSession session, int startNum, int endNum) {
+        int actualStart = Math.max(1, startNum);
+        int actualEnd = Math.max(actualStart, endNum);
+        Map<String, Object> body = Map.of(
+                "StartNum", actualStart,
+                "EndNum", actualEnd,
+                "UserId", session.userId(),
+                "Token", session.token()
+        );
+        return postJson("GetMyUploadListV3", body, CloudGalleryResponse.class);
+    }
+
+    /**
+     * Retrieves the artworks favorited/liked by the authenticated user.
+     *
+     * @param session  the active cloud session
+     * @param startNum pagination start offset (1-based)
+     * @param endNum   pagination end offset (inclusive)
+     * @return user's liked artworks
+     */
+    public CloudGalleryResponse getMyLikes(DivoomCloudSession session, int startNum, int endNum) {
+        int actualStart = Math.max(1, startNum);
+        int actualEnd = Math.max(actualStart, endNum);
+        Map<String, Object> body = Map.of(
+                "StartNum", actualStart,
+                "EndNum", actualEnd,
+                "UserId", session.userId(),
+                "Token", session.token()
+        );
+        return postJson("GetMyLikeListV3", body, CloudGalleryResponse.class);
+    }
+
+    /**
+     * Retrieves the top 20 official community clock dial faces for a device.
+     *
+     * @param deviceId the registered device ID
+     * @param startNum pagination start offset (1-based)
+     * @param endNum   pagination end offset (inclusive)
+     * @return top community clocks
+     */
+    public ClockStoreResponse getTopClocks(long deviceId, int startNum, int endNum) {
+        int actualStart = Math.max(1, startNum);
+        int actualEnd = Math.max(actualStart, endNum);
+        Map<String, Object> body = Map.of(
+                "Flag", 1,
+                "StartNum", actualStart,
+                "EndNum", actualEnd,
+                "DeviceId", deviceId,
+                "Language", "en",
+                "CountryISOCode", "US"
+        );
+        return postJson("Channel/StoreTop20", body, ClockStoreResponse.class);
+    }
+
+    /**
+     * Browses community clock dial faces by classification.
+     *
+     * @param deviceId   the registered device ID
+     * @param classifyId category identifier
+     * @param startNum   pagination start offset (1-based)
+     * @param endNum     pagination end offset (inclusive)
+     * @return community clocks in category
+     */
+    public ClockStoreResponse browseClocks(long deviceId, int classifyId, int startNum, int endNum) {
+        int actualStart = Math.max(1, startNum);
+        int actualEnd = Math.max(actualStart, endNum);
+        Map<String, Object> body = Map.of(
+                "ClassifyId", classifyId,
+                "Flag", 0,
+                "StartNum", actualStart,
+                "EndNum", actualEnd,
+                "DeviceId", deviceId,
+                "Language", "en",
+                "CountryISOCode", "US"
+        );
+        return postJson("Channel/StoreClockGetList", body, ClockStoreResponse.class);
     }
 
     /**

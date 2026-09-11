@@ -52,7 +52,16 @@ public sealed interface PixooCommand permits
         PixooCommand.GetClockInfoCommand,
         PixooCommand.SetCustomPageIndexCommand,
         PixooCommand.GetCustomPageIndexCommand,
-        PixooCommand.GetStorageStatusCommand {
+        PixooCommand.GetStorageStatusCommand,
+        PixooCommand.SetDelayPowerOffCommand,
+        PixooCommand.GetDelayPowerOffCommand,
+        PixooCommand.TomatoSetCommand,
+        PixooCommand.TomatoStartCommand,
+        PixooCommand.AlarmGetCommand,
+        PixooCommand.AlarmSetCommand,
+        PixooCommand.AlarmDelCommand,
+        PixooCommand.MemorialSetCommand,
+        PixooCommand.MemorialDelCommand {
 
     /**
      * Gets the command string identifier used by the Pixoo64 API.
@@ -474,6 +483,126 @@ public sealed interface PixooCommand permits
         @JsonProperty("Command")
         public String getCommand() {
             return command();
+        }
+    }
+
+    /** Command to set delay power off timer in minutes (0 to cancel). */
+    record SetDelayPowerOffCommand(
+            @JsonProperty("DelayPowerOff") int delayPowerOff
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Device/SetDelayPowerOff";
+        }
+    }
+
+    /** Command to get delay power off timer. */
+    record GetDelayPowerOffCommand() implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Device/GetDelayPowerOff";
+        }
+
+        @JsonProperty("Command")
+        public String getCommand() {
+            return command();
+        }
+    }
+
+    /** Command to configure pomodoro focus timer. */
+    record TomatoSetCommand(
+            @JsonProperty("TomatoId") int tomatoId,
+            @JsonProperty("TomatoName") String tomatoName,
+            @JsonProperty("WorkTime") int workTime,
+            @JsonProperty("ShortRestTime") int shortRestTime,
+            @JsonProperty("LongRestTime") int longRestTime
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Tomato/Set";
+        }
+    }
+
+    /** Command to start a pomodoro focus timer. */
+    record TomatoStartCommand(
+            @JsonProperty("TomatoId") int tomatoId
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Tomato/Start";
+        }
+    }
+
+    /** Command to retrieve configured alarms. */
+    record AlarmGetCommand(
+            @JsonProperty("IsGetAll") int isGetAll
+    ) implements PixooCommand {
+        public AlarmGetCommand() {
+            this(1);
+        }
+
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Alarm/Get";
+        }
+    }
+
+    /** Command to configure an alarm. */
+    record AlarmSetCommand(
+            @JsonProperty("AlarmId") int alarmId,
+            @JsonProperty("AlarmName") String alarmName,
+            @JsonProperty("AlarmTime") long alarmTime,
+            @JsonProperty("EnableFlag") int enableFlag,
+            @JsonProperty("RepeatArray") java.util.List<Integer> repeatArray,
+            @JsonProperty("Volume") int volume,
+            @JsonProperty("SoundType") int soundType
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Alarm/Set";
+        }
+    }
+
+    /** Command to delete an alarm. */
+    record AlarmDelCommand(
+            @JsonProperty("AlarmId") int alarmId
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Alarm/Del";
+        }
+    }
+
+    /** Command to configure a memorial day countdown. */
+    record MemorialSetCommand(
+            @JsonProperty("MemorialId") int memorialId,
+            @JsonProperty("MemorialName") String memorialName,
+            @JsonProperty("MemorialMoon") int memorialMoon,
+            @JsonProperty("MemorialDay") int memorialDay,
+            @JsonProperty("MemorialTime") int memorialTime
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Memorial/Set";
+        }
+    }
+
+    /** Command to delete a memorial day countdown. */
+    record MemorialDelCommand(
+            @JsonProperty("MemorialId") int memorialId
+    ) implements PixooCommand {
+        @Override
+        @JsonProperty("Command")
+        public String command() {
+            return "Memorial/Del";
         }
     }
 }

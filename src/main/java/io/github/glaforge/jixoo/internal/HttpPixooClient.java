@@ -27,6 +27,7 @@ import io.github.glaforge.jixoo.model.command.PixooCommand;
 import io.github.glaforge.jixoo.model.sys.ChannelConfig;
 import io.github.glaforge.jixoo.model.sys.SysConfig;
 import io.github.glaforge.jixoo.model.tool.NoiseStatus;
+import io.github.glaforge.jixoo.model.tool.PixooAlarm;
 import io.github.glaforge.jixoo.model.tool.ScoreboardStatus;
 import io.github.glaforge.jixoo.model.tool.StopwatchAction;
 import io.github.glaforge.jixoo.model.tool.StopwatchStatus;
@@ -42,6 +43,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -390,5 +392,72 @@ public class HttpPixooClient implements PixooClient {
     public boolean isStorageFull() {
         StorageStatusResponse resp = executeCommand(new PixooCommand.GetStorageStatusCommand(), StorageStatusResponse.class);
         return resp.full() != null && resp.full() == 1;
+    }
+
+    @Override
+    public PixooResponse setSleepTimer(int minutes) {
+        return executeCommand(new PixooCommand.SetDelayPowerOffCommand(minutes));
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record DelayPowerOffResponse(@JsonProperty("DelayPowerOff") Integer delayPowerOff) {}
+
+    @Override
+    public int getSleepTimer() {
+        DelayPowerOffResponse resp = executeCommand(new PixooCommand.GetDelayPowerOffCommand(), DelayPowerOffResponse.class);
+        return resp.delayPowerOff() != null ? resp.delayPowerOff() : 0;
+    }
+
+    @Override
+    public PixooResponse setPomodoro(int id, String name, int workMinutes, int shortRestMinutes, int longRestMinutes) {
+        return executeCommand(new PixooCommand.TomatoSetCommand(id, name, workMinutes, shortRestMinutes, longRestMinutes));
+    }
+
+    @Override
+    public PixooResponse startPomodoro(int id) {
+        return executeCommand(new PixooCommand.TomatoStartCommand(id));
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record AlarmListResponse(@JsonProperty("AlarmList") List<PixooAlarm> alarmList) {}
+
+    @Override
+    public List<PixooAlarm> getAlarms() {
+        AlarmListResponse resp = executeCommand(new PixooCommand.AlarmGetCommand(1), AlarmListResponse.class);
+        return resp.alarmList() != null ? resp.alarmList() : List.of();
+    }
+
+    @Override
+    public PixooResponse setAlarm(PixooAlarm alarm) {
+        return executeCommand(new PixooCommand.AlarmSetCommand(
+                alarm.alarmId(),
+                alarm.alarmName(),
+                alarm.alarmTime(),
+                alarm.enableFlag(),
+                alarm.repeatArray(),
+                alarm.volume(),
+                alarm.soundType()
+        ));
+    }
+
+    @Override
+    public PixooResponse deleteAlarm(int alarmId) {
+        return executeCommand(new PixooCommand.AlarmDelCommand(alarmId));
+    }
+
+    @Override
+    public PixooResponse setMemorial(int id, String name, int month, int day, int hour, int minute) {
+        return executeCommand(new PixooCommand.MemorialSetCommand(
+                id,
+                name,
+                month,
+                day,
+                hour * 60 + minute
+        ));
+    }
+
+    @Override
+    public PixooResponse deleteMemorial(int memorialId) {
+        return executeCommand(new PixooCommand.MemorialDelCommand(memorialId));
     }
 }

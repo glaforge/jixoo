@@ -25,6 +25,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.ParentCommand;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -32,12 +33,15 @@ import java.util.concurrent.Callable;
  */
 @Command(
         name = "tool",
-        description = "Control hardware built-in tools (stopwatch, timer, scoreboard, noise meter).",
+        description = "Control hardware built-in tools (stopwatch, timer, scoreboard, noise meter, pomodoro, alarm, countdown).",
         subcommands = {
                 ToolCommand.StopwatchSubcommand.class,
                 ToolCommand.TimerSubcommand.class,
                 ToolCommand.ScoreboardSubcommand.class,
-                ToolCommand.NoiseSubcommand.class
+                ToolCommand.NoiseSubcommand.class,
+                ToolCommand.PomodoroSubcommand.class,
+                ToolCommand.AlarmSubcommand.class,
+                ToolCommand.CountdownSubcommand.class
         }
 )
 public class ToolCommand implements Callable<Integer> {
@@ -222,6 +226,274 @@ public class ToolCommand implements Callable<Integer> {
                     yield 1;
                 }
             };
+        }
+    }
+
+    @Command(name = "pomodoro", aliases = {"tomato"}, description = "Configure and start Pomodoro focus timer.")
+    public static class PomodoroSubcommand implements Callable<Integer> {
+        @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+        private boolean helpRequested;
+
+        @ParentCommand
+        private ToolCommand parent;
+
+        @Parameters(index = "0", defaultValue = "start", description = "Action: 'start' or 'set'")
+        private String action;
+
+        @Option(names = {"--work"}, defaultValue = "25", description = "Work session duration in minutes (default: 25)")
+        private int workMinutes;
+
+        @Option(names = {"--short-rest"}, defaultValue = "5", description = "Short rest duration in minutes (default: 5)")
+        private int shortRestMinutes;
+
+        @Option(names = {"--long-rest"}, defaultValue = "15", description = "Long rest duration in minutes (default: 15)")
+        private int longRestMinutes;
+
+        @Option(names = {"--name"}, defaultValue = "Pomodoro", description = "Pomodoro preset name")
+        private String name;
+
+        @Option(names = {"--id"}, defaultValue = "0", description = "Pomodoro preset ID (default: 0)")
+        private int id;
+
+        @Override
+        public Integer call() {
+            PixooClient client = parent.parent.createClient();
+            String norm = action.trim().toLowerCase();
+            if (norm.equals("set") || norm.equals("config")) {
+                PixooResponse resp = client.setPomodoro(id, name, workMinutes, shortRestMinutes, longRestMinutes);
+                if (resp.isSuccess()) {
+                    System.out.printf("Successfully configured Pomodoro [%d] '%s': %d min work, %d min short rest, %d min long rest.%n",
+                            id, name, workMinutes, shortRestMinutes, longRestMinutes);
+                    return 0;
+                } else {
+                    System.err.printf("Failed to configure Pomodoro (Error code: %d)%n", resp.errorCode());
+                    return 1;
+                }
+            } else if (norm.equals("start")) {
+                if (workMinutes != 25 || shortRestMinutes != 5 || longRestMinutes != 15) {
+                    client.setPomodoro(id, name, workMinutes, shortRestMinutes, longRestMinutes);
+                }
+                PixooResponse resp = client.startPomodoro(id);
+                if (resp.isSuccess()) {
+                    System.out.printf("Successfully started Pomodoro focus timer [%d] '%s'!%n", id, name);
+                    return 0;
+                } else {
+                    System.err.printf("Failed to start Pomodoro timer (Error code: %d)%n", resp.errorCode());
+                    return 1;
+                }
+            } else {
+                System.err.println("Invalid Pomodoro action: '" + action + "'. Valid: start, set.");
+                return 1;
+            }
+        }
+    }
+
+    @Command(name = "alarm", aliases = {"alarms"}, description = "Manage scheduled alarms on the device.")
+    public static class AlarmSubcommand implements Callable<Integer> {
+        @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+        private boolean helpRequested;
+
+        @ParentCommand
+        private ToolCommand parent;
+
+        @Parameters(index = "0", defaultValue = "list", description = "Action: 'list', 'set', or 'delete'")
+        private String action;
+
+        @Option(names = {"--id"}, defaultValue = "1", description = "Alarm ID (1..N, default: 1)")
+        private int id;
+
+        @Option(names = {"--name"}, defaultValue = "Alarm", description = "Alarm label/name")
+        private String name;
+
+        @Option(names = {"--time"}, description = "Alarm time in HH:mm format (e.g. 07:30)")
+        private String time;
+
+        @Option(names = {"--repeat"}, description = "Repeat days comma-separated (0=Sun, 1=Mon...6=Sat, or 'weekdays', 'daily')")
+        private String repeat;
+
+        @Option(names = {"--volume"}, defaultValue = "80", description = "Alarm buzzer volume (0-100, default: 80)")
+        private int volume;
+
+        @Option(names = {"--sound"}, defaultValue = "1", description = "Alarm sound tone type (default: 1)")
+        private int soundType;
+
+        @Override
+        public Integer call() {
+            PixooClient client = parent.parent.createClient();
+            String norm = action.trim().toLowerCase();
+            if (norm.equals("list") || norm.equals("get")) {
+                List<PixooAlarm> alarms = client.getAlarms();
+                if (alarms.isEmpty()) {
+                    System.out.println("No alarms configured on device.");
+                    return 0;
+                }
+                System.out.println("Configured Alarms:");
+                System.out.println("ID | Name            | Time  | Enabled | Repeat Days          | Volume");
+                System.out.println("---+-----------------+-------+---------+----------------------+-------");
+                for (PixooAlarm a : alarms) {
+                    long totalSeconds = a.alarmTime();
+                    long hours = (totalSeconds / 3600) % 24;
+                    long minutes = (totalSeconds / 60) % 60;
+                    String timeStr = String.format("%02d:%02d", hours, minutes);
+                    String days = formatRepeatDays(a.repeatArray());
+                    System.out.printf("%-2d | %-15s | %s | %-7s | %-20s | %3d%%%n",
+                            a.alarmId(),
+                            a.alarmName() != null ? a.alarmName() : "",
+                            timeStr,
+                            a.isEnabled() ? "Yes" : "No",
+                            days,
+                            a.volume());
+                }
+                return 0;
+            } else if (norm.equals("set") || norm.equals("add")) {
+                int hour = 8;
+                int minute = 0;
+                if (time != null && !time.isBlank()) {
+                    String[] parts = time.split(":");
+                    if (parts.length == 2) {
+                        try {
+                            hour = Integer.parseInt(parts[0].trim());
+                            minute = Integer.parseInt(parts[1].trim());
+                        } catch (NumberFormatException e) {
+                            System.err.println("Invalid time format: '" + time + "'. Expected HH:mm.");
+                            return 1;
+                        }
+                    } else {
+                        System.err.println("Invalid time format: '" + time + "'. Expected HH:mm.");
+                        return 1;
+                    }
+                }
+                List<Integer> repeatDays = parseRepeatDays(repeat);
+                PixooAlarm alarm = new PixooAlarm(id, name, hour * 3600L + minute * 60L, 1, repeatDays, volume, soundType);
+                PixooResponse resp = client.setAlarm(alarm);
+                if (resp.isSuccess()) {
+                    System.out.printf("Successfully set alarm #%d '%s' for %02d:%02d.%n", id, name, hour, minute);
+                    return 0;
+                } else {
+                    System.err.printf("Failed to set alarm (Error code: %d)%n", resp.errorCode());
+                    return 1;
+                }
+            } else if (norm.equals("del") || norm.equals("delete") || norm.equals("remove")) {
+                PixooResponse resp = client.deleteAlarm(id);
+                if (resp.isSuccess()) {
+                    System.out.printf("Successfully deleted alarm #%d.%n", id);
+                    return 0;
+                } else {
+                    System.err.printf("Failed to delete alarm (Error code: %d)%n", resp.errorCode());
+                    return 1;
+                }
+            } else {
+                System.err.println("Invalid alarm action: '" + action + "'. Valid: list, set, delete.");
+                return 1;
+            }
+        }
+
+        private static List<Integer> parseRepeatDays(String str) {
+            if (str == null || str.isBlank()) return List.of();
+            String norm = str.trim().toLowerCase();
+            if (norm.equals("daily") || norm.equals("everyday") || norm.equals("all")) {
+                return List.of(0, 1, 2, 3, 4, 5, 6);
+            }
+            if (norm.equals("weekdays")) {
+                return List.of(1, 2, 3, 4, 5);
+            }
+            if (norm.equals("weekends")) {
+                return List.of(0, 6);
+            }
+            List<Integer> result = new java.util.ArrayList<>();
+            for (String part : str.split(",")) {
+                try {
+                    result.add(Integer.parseInt(part.trim()));
+                } catch (NumberFormatException ignored) {}
+            }
+            return result;
+        }
+
+        private static String formatRepeatDays(List<Integer> days) {
+            if (days == null || days.isEmpty()) return "Once";
+            if (days.size() == 7) return "Daily";
+            if (days.size() == 5 && days.containsAll(List.of(1, 2, 3, 4, 5))) return "Weekdays";
+            if (days.size() == 2 && days.containsAll(List.of(0, 6))) return "Weekends";
+            String[] names = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+            StringBuilder sb = new StringBuilder();
+            for (int d : days) {
+                if (d >= 0 && d < names.length) {
+                    if (!sb.isEmpty()) sb.append(",");
+                    sb.append(names[d]);
+                }
+            }
+            return sb.toString();
+        }
+    }
+
+    @Command(name = "countdown", aliases = {"memorial"}, description = "Configure or delete event countdowns / memorial days.")
+    public static class CountdownSubcommand implements Callable<Integer> {
+        @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+        private boolean helpRequested;
+
+        @ParentCommand
+        private ToolCommand parent;
+
+        @Parameters(index = "0", defaultValue = "set", description = "Action: 'set' or 'delete'")
+        private String action;
+
+        @Option(names = {"--id"}, defaultValue = "1", description = "Countdown ID (1..N, default: 1)")
+        private int id;
+
+        @Option(names = {"--name"}, defaultValue = "Event", description = "Event title / name")
+        private String name;
+
+        @Option(names = {"--month"}, description = "Target month (1..12)")
+        private Integer month;
+
+        @Option(names = {"--day"}, description = "Target day of month (1..31)")
+        private Integer day;
+
+        @Option(names = {"--time"}, defaultValue = "00:00", description = "Target time HH:mm (default: 00:00)")
+        private String time;
+
+        @Override
+        public Integer call() {
+            PixooClient client = parent.parent.createClient();
+            String norm = action.trim().toLowerCase();
+            if (norm.equals("set") || norm.equals("add")) {
+                if (month == null || day == null) {
+                    System.err.println("Error: --month and --day are required when configuring a countdown.");
+                    return 1;
+                }
+                int hour = 0;
+                int min = 0;
+                if (time != null && !time.isBlank()) {
+                    String[] parts = time.split(":");
+                    if (parts.length == 2) {
+                        try {
+                            hour = Integer.parseInt(parts[0].trim());
+                            min = Integer.parseInt(parts[1].trim());
+                        } catch (NumberFormatException ignored) {}
+                    }
+                }
+                PixooResponse resp = client.setMemorial(id, name, month, day, hour, min);
+                if (resp.isSuccess()) {
+                    System.out.printf("Successfully configured countdown #%d '%s' for month %d, day %d (%02d:%02d).%n",
+                            id, name, month, day, hour, min);
+                    return 0;
+                } else {
+                    System.err.printf("Failed to set countdown (Error code: %d)%n", resp.errorCode());
+                    return 1;
+                }
+            } else if (norm.equals("del") || norm.equals("delete") || norm.equals("remove")) {
+                PixooResponse resp = client.deleteMemorial(id);
+                if (resp.isSuccess()) {
+                    System.out.printf("Successfully deleted countdown #%d.%n", id);
+                    return 0;
+                } else {
+                    System.err.printf("Failed to delete countdown (Error code: %d)%n", resp.errorCode());
+                    return 1;
+                }
+            } else {
+                System.err.println("Invalid countdown action: '" + action + "'. Valid: set, delete.");
+                return 1;
+            }
         }
     }
 }

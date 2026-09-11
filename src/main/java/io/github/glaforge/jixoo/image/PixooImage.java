@@ -141,9 +141,10 @@ public record PixooImage(int width, int height, int[] argbPixels) {
             mode = ImageProcessor.ScaleMode.FIT_CENTER;
         }
 
-        if (this.width == targetWidth && this.height == targetHeight && mode == ImageProcessor.ScaleMode.STRETCH) {
+        if (this.width == targetWidth && this.height == targetHeight) {
             return this;
         }
+
 
         int scaledW;
         int scaledH;

@@ -15,14 +15,15 @@
  */
 package io.github.glaforge.jixoo.cli.command;
 
+import io.github.glaforge.jixoo.api.PixooClient;
+import io.github.glaforge.jixoo.api.PixooResponse;
+import io.github.glaforge.jixoo.cli.PixooCli;
 import io.github.glaforge.jixoo.cloud.DivoomAnimationEncoder;
 import io.github.glaforge.jixoo.cloud.DivoomCloudClient;
-import io.github.glaforge.jixoo.cloud.model.DivoomApiResponse;
-import io.github.glaforge.jixoo.cloud.model.DivoomCloudSession;
-import io.github.glaforge.jixoo.cloud.model.DivoomCustomListItem;
-import io.github.glaforge.jixoo.cloud.model.DivoomCustomListResponse;
-import io.github.glaforge.jixoo.cloud.model.DivoomDeviceListResponse;
+import io.github.glaforge.jixoo.cloud.model.*;
+import io.github.glaforge.jixoo.image.DivoomAssetDecoder;
 import io.github.glaforge.jixoo.image.GifDecoder;
+import io.github.glaforge.jixoo.image.GifEncoder;
 import io.github.glaforge.jixoo.image.ImageProcessor;
 import io.github.glaforge.jixoo.model.PixooAnimation;
 import picocli.CommandLine;
@@ -30,6 +31,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
+import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
 
 import java.io.PrintWriter;
@@ -45,19 +47,29 @@ import java.util.concurrent.Callable;
  */
 @Command(
         name = "cloud",
-        description = "Manage Divoom Cloud integration, persistent Custom Channels, and Gallery uploads.",
+        description = "Manage Divoom Cloud integration, persistent Custom Channels, and public Gallery discovery.",
         subcommands = {
                 CloudCommand.LoginCommand.class,
                 CloudCommand.LogoutCommand.class,
                 CloudCommand.DevicesCommand.class,
                 CloudCommand.CustomChannelCommand.class,
-                CloudCommand.GalleryCommand.class
+                CloudCommand.GalleryCommand.class,
+                CloudCommand.BrowseCommand.class,
+                CloudCommand.SearchCommand.class,
+                CloudCommand.ArtistCommand.class,
+                CloudCommand.UploadsCommand.class,
+                CloudCommand.LikesCommand.class,
+                CloudCommand.DownloadCommand.class,
+                CloudCommand.PlayCommand.class
         }
 )
 public class CloudCommand implements Callable<Integer> {
 
     @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
     private boolean helpRequested;
+
+    @ParentCommand
+    PixooCli cliParent;
 
     @Override
     public Integer call() {
@@ -525,6 +537,305 @@ public class CloudCommand implements Callable<Integer> {
                 }
             } catch (Exception e) {
                 System.err.printf("Error publishing to gallery: %s%n", e.getMessage());
+                return 1;
+            }
+        }
+    }
+
+    private static void printGalleryItems(String title, List<CloudGalleryItem> items) {
+        System.out.println(title + ":");
+        if (items == null || items.isEmpty()) {
+            System.out.println("  (No artworks found)");
+            return;
+        }
+        System.out.println("GalleryId | FileId                          | Artist (ID)        | Likes | Name");
+        System.out.println("----------+---------------------------------+--------------------+-------+-------------------");
+        for (CloudGalleryItem item : items) {
+            String artistStr = String.format("%s (%d)",
+                    item.userName() != null ? item.userName() : "Anon",
+                    item.userId());
+            System.out.printf("%-9d | %-31s | %-18s | %5d | %s%n",
+                    item.galleryId(),
+                    item.fileId() != null ? item.fileId() : "",
+                    artistStr.length() > 18 ? artistStr.substring(0, 18) : artistStr,
+                    item.likeCount(),
+                    item.fileName() != null ? item.fileName() : "");
+        }
+    }
+
+    @Command(name = "browse", description = "Browse curated 64x64 animations in the Divoom public gallery.")
+    public static class BrowseCommand implements Callable<Integer> {
+        @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+        private boolean helpRequested;
+
+        @Option(names = {"-c", "--category", "--classify"}, defaultValue = "0", description = "Category ID (0=All, 1=Pixel, etc.)")
+        private int category;
+
+        @Option(names = {"-s", "--sort"}, defaultValue = "POPULAR", description = "Sort order: POPULAR or NEWEST")
+        private GallerySort sort;
+
+        @Option(names = {"--start"}, defaultValue = "0", description = "Starting index (default: 0)")
+        private int start;
+
+        @Option(names = {"--end"}, defaultValue = "19", description = "Ending index (default: 19)")
+        private int end;
+
+        @Override
+        public Integer call() {
+            try (DivoomCloudClient client = new DivoomCloudClient()) {
+                CloudGalleryResponse resp = client.browseGallery(category, sort, start, end);
+                printGalleryItems("Divoom Public Gallery (" + sort + ")", resp.getItems());
+                return 0;
+            } catch (Exception e) {
+                System.err.printf("Error browsing gallery: %s%n", e.getMessage());
+                return 1;
+            }
+        }
+    }
+
+    @Command(name = "search", description = "Search animations in the Divoom public gallery by keyword.")
+    public static class SearchCommand implements Callable<Integer> {
+        @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+        private boolean helpRequested;
+
+        @Parameters(index = "0", description = "Search keyword (e.g. 'mario', 'space', 'cyberpunk')")
+        private String keyword;
+
+        @Option(names = {"--start"}, defaultValue = "0", description = "Starting index (default: 0)")
+        private int start;
+
+        @Option(names = {"--end"}, defaultValue = "19", description = "Ending index (default: 19)")
+        private int end;
+
+        @Override
+        public Integer call() {
+            try (DivoomCloudClient client = new DivoomCloudClient()) {
+                CloudGalleryResponse resp = client.searchGallery(keyword, start, end);
+                printGalleryItems("Search results for '" + keyword + "'", resp.getItems());
+                return 0;
+            } catch (Exception e) {
+                System.err.printf("Error searching gallery: %s%n", e.getMessage());
+                return 1;
+            }
+        }
+    }
+
+    @Command(name = "artist", description = "View artist/creator profile and public artworks.")
+    public static class ArtistCommand implements Callable<Integer> {
+        @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+        private boolean helpRequested;
+
+        @Parameters(index = "0", description = "Artist User ID")
+        private long artistId;
+
+        @Option(names = {"--start"}, defaultValue = "0", description = "Starting artwork index (default: 0)")
+        private int start;
+
+        @Option(names = {"--end"}, defaultValue = "19", description = "Ending artwork index (default: 19)")
+        private int end;
+
+        @Override
+        public Integer call() {
+            try (DivoomCloudClient client = new DivoomCloudClient()) {
+                ArtistProfile profile = client.getArtistProfile(artistId);
+                System.out.printf("Artist: %s (ID: %d)%n", profile.userName() != null ? profile.userName() : "Unknown", profile.userId());
+                if (profile.bio() != null && !profile.bio().isBlank()) {
+                    System.out.printf("  Bio:       %s%n", profile.bio());
+                }
+                System.out.printf("  Followers: %d | Following: %d%n", profile.followerCount(), profile.followingCount());
+                System.out.println();
+
+                CloudGalleryResponse resp = client.getArtistArtworks(artistId, start, end);
+                printGalleryItems("Artworks by " + (profile.userName() != null ? profile.userName() : "Artist " + artistId), resp.getItems());
+                return 0;
+            } catch (Exception e) {
+                System.err.printf("Error fetching artist profile: %s%n", e.getMessage());
+                return 1;
+            }
+        }
+    }
+
+    @Command(name = "uploads", description = "List your uploaded pixel artworks in Divoom Cloud.")
+    public static class UploadsCommand implements Callable<Integer> {
+        @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+        private boolean helpRequested;
+
+        @Option(names = {"-e", "--email"}, description = "Divoom account email")
+        private String email;
+
+        @Option(names = {"-p", "--password"}, description = "Divoom account password")
+        private String password;
+
+        @Option(names = {"--start"}, defaultValue = "0", description = "Starting index (default: 0)")
+        private int start;
+
+        @Option(names = {"--end"}, defaultValue = "19", description = "Ending index (default: 19)")
+        private int end;
+
+        @Override
+        public Integer call() {
+            try (DivoomCloudClient client = new DivoomCloudClient()) {
+                DivoomCloudSession session = resolveSession(email, password);
+                CloudGalleryResponse resp = client.getMyUploads(session, start, end);
+                printGalleryItems("Your Uploaded Artworks", resp.getItems());
+                return 0;
+            } catch (Exception e) {
+                System.err.printf("Error fetching your uploads: %s%n", e.getMessage());
+                return 1;
+            }
+        }
+    }
+
+    @Command(name = "likes", description = "List your favorited pixel artworks in Divoom Cloud.")
+    public static class LikesCommand implements Callable<Integer> {
+        @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+        private boolean helpRequested;
+
+        @Option(names = {"-e", "--email"}, description = "Divoom account email")
+        private String email;
+
+        @Option(names = {"-p", "--password"}, description = "Divoom account password")
+        private String password;
+
+        @Option(names = {"--start"}, defaultValue = "0", description = "Starting index (default: 0)")
+        private int start;
+
+        @Option(names = {"--end"}, defaultValue = "19", description = "Ending index (default: 19)")
+        private int end;
+
+        @Override
+        public Integer call() {
+            try (DivoomCloudClient client = new DivoomCloudClient()) {
+                DivoomCloudSession session = resolveSession(email, password);
+                CloudGalleryResponse resp = client.getMyLikes(session, start, end);
+                printGalleryItems("Your Favorited Artworks", resp.getItems());
+                return 0;
+            } catch (Exception e) {
+                System.err.printf("Error fetching your likes: %s%n", e.getMessage());
+                return 1;
+            }
+        }
+    }
+
+    @Command(name = "download", description = "Download an artwork asset from Divoom Cloud CDN by FileId and convert to animated GIF.")
+    public static class DownloadCommand implements Callable<Integer> {
+        @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+        private boolean helpRequested;
+
+        @Parameters(index = "0", description = "File ID (e.g. group1/M00/... or full URL)")
+        private String fileId;
+
+        @Option(names = {"-o", "--output"}, description = "Output file path (default: <filename>.gif)")
+        private String outputPath;
+
+        @Option(names = {"--raw"}, description = "Save raw Divoom binary asset without converting to GIF")
+        private boolean raw;
+
+        @Override
+        public Integer call() {
+            try (DivoomCloudClient client = new DivoomCloudClient()) {
+                System.out.printf("Downloading asset %s...%n", fileId);
+                byte[] data = client.downloadAsset(fileId);
+
+                String cleanName = fileId.contains("/") ? fileId.substring(fileId.lastIndexOf('/') + 1) : fileId;
+                boolean isRawRequested = raw || (outputPath != null && outputPath.toLowerCase().endsWith(".bin"));
+
+                Path outPath;
+                if (isRawRequested) {
+                    if (outputPath != null && !outputPath.isBlank()) {
+                        outPath = Paths.get(outputPath);
+                    } else {
+                        if (!cleanName.toLowerCase().endsWith(".bin")) cleanName += ".bin";
+                        outPath = Paths.get(cleanName);
+                    }
+                    Files.write(outPath, data);
+                    System.out.printf("Raw Divoom asset saved (%d bytes) to %s.%n", data.length, outPath.toAbsolutePath());
+                    return 0;
+                }
+
+                // Check if already a standard GIF
+                if (data.length > 6 && (data[0] == 'G' && data[1] == 'I' && data[2] == 'F')) {
+                    if (outputPath != null && !outputPath.isBlank()) {
+                        outPath = Paths.get(outputPath);
+                    } else {
+                        if (!cleanName.toLowerCase().endsWith(".gif")) cleanName += ".gif";
+                        outPath = Paths.get(cleanName);
+                    }
+                    Files.write(outPath, data);
+                    System.out.printf("GIF asset saved (%d bytes) to %s.%n", data.length, outPath.toAbsolutePath());
+                    return 0;
+                }
+
+                // Decode Divoom binary asset and convert to GIF
+                try {
+                    PixooAnimation animation = DivoomAssetDecoder.decode(data);
+                    byte[] gifBytes = GifEncoder.encode(animation);
+
+                    if (outputPath != null && !outputPath.isBlank()) {
+                        outPath = Paths.get(outputPath);
+                    } else {
+                        if (!cleanName.toLowerCase().endsWith(".gif")) cleanName += ".gif";
+                        outPath = Paths.get(cleanName);
+                    }
+                    Files.write(outPath, gifBytes);
+                    System.out.printf("Successfully converted and saved animated GIF (%d frames, %d bytes) to %s.%n",
+                            animation.frameCount(), gifBytes.length, outPath.toAbsolutePath());
+                    return 0;
+                } catch (Exception decodeEx) {
+                    System.err.printf("Warning: Could not decode as Divoom binary (%s). Saving raw asset instead.%n", decodeEx.getMessage());
+                    if (outputPath != null && !outputPath.isBlank()) {
+                        outPath = Paths.get(outputPath);
+                    } else {
+                        if (!cleanName.toLowerCase().endsWith(".bin")) cleanName += ".bin";
+                        outPath = Paths.get(cleanName);
+                    }
+                    Files.write(outPath, data);
+                    System.out.printf("Raw asset saved (%d bytes) to %s.%n", data.length, outPath.toAbsolutePath());
+                    return 0;
+                }
+            } catch (Exception e) {
+                System.err.printf("Failed to download asset: %s%n", e.getMessage());
+                return 1;
+            }
+        }
+    }
+
+
+    @Command(name = "play", description = "Download a cloud artwork by FileId and stream it directly to your Pixoo display.")
+    public static class PlayCommand implements Callable<Integer> {
+        @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+        private boolean helpRequested;
+
+        @ParentCommand
+        private CloudCommand parent;
+
+        @Parameters(index = "0", description = "Cloud File ID (e.g. group1/M00/... or full URL)")
+        private String fileId;
+
+        @Override
+        public Integer call() {
+            try (DivoomCloudClient cloud = new DivoomCloudClient()) {
+                System.out.printf("1. Downloading cloud asset '%s'...%n", fileId);
+                byte[] binaryData = cloud.downloadAsset(fileId);
+                System.out.printf("   Downloaded %d bytes.%n", binaryData.length);
+
+                System.out.println("2. Decoding Divoom 64x64 binary format in pure Java...");
+                PixooAnimation animation = DivoomAssetDecoder.decode(binaryData);
+                System.out.printf("   Successfully decoded %d frame(s) (delay %d ms).%n",
+                        animation.frameCount(), animation.frames().isEmpty() ? 0 : animation.frames().get(0).delayMs());
+
+                System.out.println("3. Streaming animation to Pixoo 64 display...");
+                PixooClient pixoo = parent.cliParent != null ? parent.cliParent.createClient() : PixooClient.builder().ipAddress("127.0.0.1").build();
+                PixooResponse resp = pixoo.sendAnimation(animation);
+                if (resp.isSuccess()) {
+                    System.out.println("SUCCESS! Playing animation on Pixoo display.");
+                    return 0;
+                } else {
+                    System.err.printf("Device error while sending animation: code %d%n", resp.errorCode());
+                    return 1;
+                }
+            } catch (Exception e) {
+                System.err.printf("Error playing cloud asset: %s%n", e.getMessage());
                 return 1;
             }
         }

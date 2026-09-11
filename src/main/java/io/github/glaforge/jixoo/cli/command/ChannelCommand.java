@@ -19,6 +19,9 @@ import io.github.glaforge.jixoo.api.PixooChannel;
 import io.github.glaforge.jixoo.api.PixooClient;
 import io.github.glaforge.jixoo.api.PixooResponse;
 import io.github.glaforge.jixoo.cli.PixooCli;
+import io.github.glaforge.jixoo.cloud.DivoomCloudClient;
+import io.github.glaforge.jixoo.cloud.model.ClockFaceItem;
+import io.github.glaforge.jixoo.cloud.model.ClockStoreResponse;
 import io.github.glaforge.jixoo.model.sys.ChannelConfig;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -26,6 +29,7 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.ParentCommand;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -131,7 +135,15 @@ public class ChannelCommand implements Callable<Integer> {
         }
     }
 
-    @Command(name = "clock-face", aliases = {"dial"}, description = "Select active clock face by ClockId or query current ClockId.")
+    @Command(
+            name = "clock-face",
+            aliases = {"dial"},
+            description = "Select active clock face by ClockId, query current ClockId, or explore community clock faces.",
+            subcommands = {
+                    ClockFaceSubcommand.TopSubcommand.class,
+                    ClockFaceSubcommand.BrowseSubcommand.class
+            }
+    )
     public static class ClockFaceSubcommand implements Callable<Integer> {
         @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
         private boolean helpRequested;
@@ -162,6 +174,82 @@ public class ChannelCommand implements Callable<Integer> {
             } else {
                 System.err.printf("Failed to select clock face ID (Error code: %d)%n", resp.errorCode());
                 return 1;
+            }
+        }
+
+        @Command(name = "top", description = "List top 20 popular community clock faces from Divoom Cloud.")
+        public static class TopSubcommand implements Callable<Integer> {
+            @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+            private boolean helpRequested;
+
+            @Option(names = {"-d", "--device-id"}, defaultValue = "0", description = "Device ID (default: 0)")
+            private long deviceId;
+
+            @Option(names = {"--start"}, defaultValue = "0", description = "Starting index (default: 0)")
+            private int start;
+
+            @Option(names = {"--end"}, defaultValue = "19", description = "Ending index (default: 19)")
+            private int end;
+
+            @Override
+            public Integer call() {
+                try (DivoomCloudClient client = new DivoomCloudClient()) {
+                    ClockStoreResponse resp = client.getTopClocks(deviceId, start, end);
+                    printClockFaces("Top Community Clocks", resp.getClocks());
+                    return 0;
+                } catch (Exception e) {
+                    System.err.printf("Error fetching top clocks: %s%n", e.getMessage());
+                    return 1;
+                }
+            }
+        }
+
+        @Command(name = "browse", description = "Browse community clock faces by category from Divoom Cloud.")
+        public static class BrowseSubcommand implements Callable<Integer> {
+            @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show this help message and exit.")
+            private boolean helpRequested;
+
+            @Option(names = {"-c", "--category"}, defaultValue = "0", description = "Clock category ID (default: 0)")
+            private int category;
+
+            @Option(names = {"-d", "--device-id"}, defaultValue = "0", description = "Device ID (default: 0)")
+            private long deviceId;
+
+            @Option(names = {"--start"}, defaultValue = "0", description = "Starting index (default: 0)")
+            private int start;
+
+            @Option(names = {"--end"}, defaultValue = "19", description = "Ending index (default: 19)")
+            private int end;
+
+            @Override
+            public Integer call() {
+                try (DivoomCloudClient client = new DivoomCloudClient()) {
+                    ClockStoreResponse resp = client.browseClocks(deviceId, category, start, end);
+                    printClockFaces("Community Clock Faces (Category " + category + ")", resp.getClocks());
+                    return 0;
+                } catch (Exception e) {
+                    System.err.printf("Error browsing clocks: %s%n", e.getMessage());
+                    return 1;
+                }
+            }
+        }
+
+        private static void printClockFaces(String title, List<ClockFaceItem> items) {
+            System.out.println(title + ":");
+            if (items == null || items.isEmpty()) {
+                System.out.println("  (No clock faces found)");
+                return;
+            }
+            System.out.println("ClockId | Name                 | Type | Description");
+            System.out.println("--------+----------------------+------+---------------------------");
+            for (ClockFaceItem item : items) {
+                String name = item.clockName() != null ? (item.clockName().length() > 20 ? item.clockName().substring(0, 20) : item.clockName()) : "";
+                String desc = item.description() != null ? item.description() : "";
+                System.out.printf("%-7d | %-20s | %-4d | %s%n",
+                        item.clockId(),
+                        name,
+                        item.clockType(),
+                        desc);
             }
         }
     }

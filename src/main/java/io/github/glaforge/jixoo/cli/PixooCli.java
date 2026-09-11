@@ -47,7 +47,8 @@ import java.util.concurrent.Callable;
                 CloudCommand.class,
                 ToolCommand.class,
                 TimeCommand.class,
-                ConfigCommand.class
+                ConfigCommand.class,
+                WeatherCommand.class
         }
 )
 public class PixooCli implements Callable<Integer> {

@@ -37,7 +37,17 @@ pixoo-cli screen off
 
 # Query screen state (returns ON or OFF)
 pixoo-cli screen status
+
+# Configure automatic sleep timer (in minutes)
+pixoo-cli screen sleep 30
+
+# Query remaining sleep timer status
+pixoo-cli screen sleep status
+
+# Cancel active sleep timer
+pixoo-cli screen sleep cancel
 ```
+
 
 ### `brightness`
 Set the LED matrix brightness (0–100%).
@@ -86,13 +96,19 @@ pixoo-cli channel startup get
 ```
 
 #### Clock Dial Face
-Change or query the active clock dial face ID.
+Change, query, or explore clock dial faces.
 ```bash
 # Set clock face by ID
 pixoo-cli channel clock-face set 12345
 
 # Query current clock face ID
 pixoo-cli channel clock-face get
+
+# Discover top 20 trending clock faces from Divoom Cloud Store
+pixoo-cli channel clock-face top
+
+# Browse clock faces by category
+pixoo-cli channel clock-face browse --classify 0
 ```
 
 #### Custom Page Slot
@@ -163,6 +179,40 @@ pixoo-cli tool noise stop
 # Query noise meter status (active/inactive)
 pixoo-cli tool noise status
 ```
+
+#### Pomodoro Focus Timer
+```bash
+# Start a Pomodoro session (work minutes + break minutes)
+pixoo-cli tool pomodoro start --work 25 --break 5
+
+# Stop / cancel active Pomodoro session
+pixoo-cli tool pomodoro stop
+
+# Configure Pomodoro intervals without starting immediately
+pixoo-cli tool pomodoro set --work 25 --break 5
+```
+
+#### Hardware Alarms
+```bash
+# List all configured alarms
+pixoo-cli tool alarm list
+
+# Set or update an alarm (repeat on weekdays 1..5)
+pixoo-cli tool alarm set --id 1 --time 07:30 --days 1,2,3,4,5
+
+# Delete an alarm by ID
+pixoo-cli tool alarm delete 1
+```
+
+#### Memorial Day & Event Countdown
+```bash
+# Set an annual memorial or event countdown
+pixoo-cli tool countdown set --id 1 --month 12 --day 25 --name "Christmas"
+
+# Delete a countdown by ID
+pixoo-cli tool countdown delete 1
+```
+
 
 ---
 
@@ -266,9 +316,55 @@ Options:
 
 ---
 
-### `cloud`
-Manage Divoom Cloud authentication, list bound devices, upload animations to persistent custom channel slots, and publish to the public gallery.
+### `weather`
+Query live weather conditions and 5-day forecasts via Divoom's global weather proxy without requiring API keys.
 
+```bash
+# Query current weather (defaults to Paris if omitted)
+pixoo-cli weather current --lat 48.8566 --lon 2.3522
+
+# Query 5-day weather forecast
+pixoo-cli weather forecast --lat 48.8566 --lon 2.3522
+```
+
+---
+
+### `cloud`
+Browse and search the public Divoom Cloud Gallery, explore artist profiles, stream artworks directly to your display, manage account authentication, and flash custom channel slots.
+
+#### Community Discovery & Search
+```bash
+# Browse community pixel art (POPULAR or NEWEST)
+pixoo-cli cloud browse --sort POPULAR --start 1 --end 20
+
+# Search public gallery by keyword or tag
+pixoo-cli cloud search "cyberpunk" --start 1 --end 20
+
+
+# View artist portfolio and profile biography
+pixoo-cli cloud artist 12345678 --profile
+
+# View your uploaded artworks (requires cloud login)
+pixoo-cli cloud uploads
+
+# View your favorited artworks (requires cloud login)
+pixoo-cli cloud likes
+```
+
+#### Asset Download & Direct Matrix Playback
+```bash
+# Download a cloud pixel art asset (automatically converts to animated GIF by default)
+pixoo-cli cloud download 987654 -o artwork.gif
+
+# Download raw Divoom binary asset without conversion
+pixoo-cli cloud download 987654 --raw -o artwork.bin
+
+# Stream and display community pixel art directly on your Pixoo 64!
+pixoo-cli cloud play 987654
+```
+
+
+#### Account Management & Custom Channels
 ```bash
 # Log in to Divoom Cloud account
 pixoo-cli cloud login -e user@example.com -p mypassword
@@ -285,6 +381,7 @@ pixoo-cli cloud channel --file animation.gif --slot 0
 # Publish artwork to Divoom Cloud Gallery
 pixoo-cli cloud gallery --file artwork.gif --name "Pixel Art" --desc "Created with jixoo64"
 ```
+
 
 ---
 

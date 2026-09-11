@@ -400,6 +400,114 @@ Activates the device's internal microphone and displays real-time ambient noise 
 
 ---
 
+#### 4.11.5. Pomodoro Timer (`Tools/SetTomato`, `Tools/SetTomatoStatus`)
+Controls the built-in productivity Pomodoro timer on the LED matrix.
+
+##### Configure Pomodoro
+```json
+{
+  "Command": "Tools/SetTomato",
+  "WorkTime": 25,
+  "RestTime": 5
+}
+```
+* `WorkTime`: Focus duration in minutes (e.g. `25`).
+* `RestTime`: Rest/break duration in minutes (e.g. `5`).
+
+##### Start / Stop Pomodoro
+```json
+{
+  "Command": "Tools/SetTomatoStatus",
+  "Status": 1
+}
+```
+* `Status`: `1` to start the Pomodoro session, `0` to stop/pause.
+
+---
+
+#### 4.11.6. Alarm Management (`Tools/SetAlarm`, `Tools/GetAlarm`, `Tools/DelAlarm`)
+Manages the hardware alarms stored on the device.
+
+##### Query Alarms
+```json
+{
+  "Command": "Tools/GetAlarm"
+}
+```
+Response:
+```json
+{
+  "error_code": 0,
+  "AlarmList": [
+    {
+      "AlarmId": 1,
+      "Hour": 7,
+      "Minute": 30,
+      "Days": 31,
+      "Status": 1
+    }
+  ]
+}
+```
+
+##### Set Alarm
+```json
+{
+  "Command": "Tools/SetAlarm",
+  "AlarmId": 1,
+  "Hour": 7,
+  "Minute": 30,
+  "Days": 31,
+  "Status": 1
+}
+```
+* `AlarmId`: Slot ID (`1..N`).
+* `Hour`: Hour (`0..23`).
+* `Minute`: Minute (`0..59`).
+* `Days`: Bitmask representing repeating weekdays (bit 0 = Mon, ..., bit 6 = Sun; `127` = all days, `31` = weekdays).
+* `Status`: `1` for enabled, `0` for disabled.
+
+##### Delete Alarm
+```json
+{
+  "Command": "Tools/DelAlarm",
+  "AlarmId": 1
+}
+```
+
+---
+
+#### 4.11.7. Target Date / Memorial Countdown (`Tools/SetMemorialDay`, `Tools/DelMemorialDay`)
+Displays a visual countdown to a specified target annual date or event.
+
+##### Set Memorial Countdown
+```json
+{
+  "Command": "Tools/SetMemorialDay",
+  "Id": 1,
+  "MemorialMoon": 12,
+  "MemorialDay": 25,
+  "MemorialTime": 0,
+  "MemorialName": "Christmas"
+}
+```
+* `Id`: Slot ID (`1..N`).
+* `MemorialMoon`: Target month (`1..12`).
+* `MemorialDay`: Target day of month (`1..31`).
+* `MemorialTime`: Time of day in elapsed minutes (`hour * 60 + minute`).
+* `MemorialName`: Label displayed on the matrix.
+
+##### Delete Memorial Countdown
+```json
+{
+  "Command": "Tools/DelMemorialDay",
+  "Id": 1
+}
+```
+
+---
+
+
 ### 4.12. System Configuration (`Sys/...`)
 
 #### 4.12.1. `Sys/GetConf`
@@ -616,7 +724,37 @@ Directs the device to download and play an animation from a remote HTTP URL.
 
 ---
 
+### 4.17. Sleep Timer / Delayed Power Off (`Device/SetDelayPowerOff`, `Device/GetDelayPowerOff`)
+Configures or inspects a countdown timer after which the display automatically enters sleep/standby mode.
+
+#### Set Sleep Timer
+```json
+{
+  "Command": "Device/SetDelayPowerOff",
+  "DelayTime": 30
+}
+```
+* `DelayTime`: Countdown duration in minutes (`0` cancels/disables the sleep timer).
+
+#### Get Sleep Timer Status
+```json
+{
+  "Command": "Device/GetDelayPowerOff"
+}
+```
+Response:
+```json
+{
+  "error_code": 0,
+  "DelayTime": 30
+}
+```
+* `DelayTime`: Remaining minutes until automatic power-off (`0` indicates timer is inactive).
+
+---
+
 ## 5. Device Discovery Protocol
+
 
 The Pixoo 64 can be discovered on a local area network using two primary methods:
 
@@ -651,3 +789,134 @@ The Pixoo 64 can be discovered on a local area network using two primary methods
 
 6. **Maximum HTTP GIF Frame Capacity:**
    The internal memory buffer for HTTP GIF animations on the Pixoo 64 is capped at **~60 frames**. Uploading animations with more than 60 frames can result in memory overruns and command rejections (`"Request data illegal json"`). Longer animations should be downsampled (e.g. to 5-10 fps) or split into segments before transmission.
+
+---
+
+## 7. Divoom Cloud & Social API Protocol
+
+The Divoom mobile ecosystem connects to central cloud REST endpoints hosted at `https://app.divoom-gz.com/Device_Info/`.
+
+### 7.1. Pagination Rules & Conventions
+* **1-Based Indexing:** Endpoints such as `GetCategoryFileListV2`, `SearchGalleryV3`, and `GetSomeoneListV3` use `StartNum` and `EndNum`.
+  > [!IMPORTANT]
+  > `StartNum` **must be $\ge 1$**. Passing `StartNum: 0` causes the cloud server to return an empty item array (`{"ReturnCode": 0, "FileList": []}`).
+* **File Dimension Bitmask:** For Pixoo 64 (64x64 matrix), the query parameter `FileSize` should be set to `127` (all sizes) or `64`.
+
+---
+
+### 7.2. Public Gallery Discovery (`GetCategoryFileListV2`)
+Fetches public community pixel art categorized by popularity, recency, or total likes.
+
+* **Endpoint:** `POST https://app.divoom-gz.com/Device_Info/Channel/GetCategoryFileListV2`
+* **Request Body:**
+```json
+{
+  "StartNum": 1,
+  "EndNum": 20,
+  "SortType": 1,
+  "Classify": 0,
+  "FileSize": 127,
+  "FileType": 5,
+  "FileSort": 0,
+  "RefreshIndex": 0,
+  "Version": 19
+}
+```
+* `SortType`: `0` for Newest, `1` for Hot / Most Popular, `2` for Most Liked.
+* `Classify`: Category filter (`0` for All, `1` Characters, `2` Animals, etc.).
+
+---
+
+### 7.3. Gallery Search (`SearchGalleryV3`)
+Searches community pixel art by keyword or tag.
+
+* **Endpoint:** `POST https://app.divoom-gz.com/Device_Info/Channel/SearchGalleryV3`
+* **Request Body:**
+```json
+{
+  "StartNum": 1,
+  "EndNum": 20,
+  "SearchKey": "cyberpunk",
+  "FileSize": 127,
+  "FileType": 5,
+  "FileSort": 0,
+  "RefreshIndex": 0,
+  "Version": 19
+}
+```
+
+---
+
+### 7.4. Artist Portfolio & Profile (`GetSomeoneListV3`, `GetSomeoneInfoV2`)
+Discovers artworks published by specific community artists, user uploads, or user favorites.
+
+#### Fetch Artist Artworks
+* **Endpoint:** `POST https://app.divoom-gz.com/Device_Info/Channel/GetSomeoneListV3`
+* **Request Body:**
+```json
+{
+  "StartNum": 1,
+  "EndNum": 20,
+  "SomeOneUserId": 12345678,
+  "ShowAllFlag": 1,
+  "Classify": 0,
+  "FileSize": 127,
+  "FileType": 5,
+  "FileSort": 0,
+  "RefreshIndex": 0,
+  "Version": 19
+}
+```
+
+#### Fetch Artist Profile
+* **Endpoint:** `POST https://app.divoom-gz.com/Device_Info/Channel/GetSomeoneInfoV2`
+* **Request Body:** `{"UserId": 12345678}`
+* **Response Keys:** Returns `NickName`, `UserNewSign` (bio), `FansCnt`, `FollowCnt`, `LikeCnt`, `HeadUrl` (avatar), and `WorkCnt`.
+
+---
+
+### 7.5. Clock Face Store (`Channel/StoreTop20`, `Channel/StoreGetClassifyList`)
+Discovers curated and trending clock dial faces created for the Pixoo 64.
+
+* **Endpoints:**
+  * `POST https://app.divoom-gz.com/Device_Info/Channel/StoreTop20`: Retrieves top 20 downloaded clock faces.
+  * `POST https://app.divoom-gz.com/Device_Info/Channel/StoreGetClassifyList`: Retrieves clock faces filtered by category.
+
+---
+
+## 8. Divoom Zero-Authentication Weather Proxy
+
+Divoom devices fetch weather and multi-day forecasts via a public cache proxy without requiring an OpenWeatherMap API key.
+
+* **Endpoint:** `GET https://wea.divoom-gz.com/OpenWeatherMapCache.php`
+* **Query Parameters:**
+  * `action`: `current_weather` or `forecast_weather`
+  * `longitude`: Decimal longitude (e.g. `2.3522`)
+  * `latitude`: Decimal latitude (e.g. `48.8566`)
+  * `mode`: `base64` (the server returns the JSON payload wrapped in a Base64 string)
+  * `version`: `1`
+
+---
+
+## 9. Divoom Native Binary Asset Format & Codec
+
+Artworks stored on Divoom Cloud servers are often serialized as custom binary `.bin` files rather than standard GIF or PNG files.
+
+### 9.1. Format Structure (Format 26 / Format 18)
+* **Magic Header:** Format identifier byte (typically `0x1A` = 26 or `0x12` = 18).
+* **Palette:**
+  * The header defines the number of color entries in the indexed palette (e.g., 256 colors).
+  * Each palette entry consists of 3 RGB bytes (`[R, G, B]`).
+* **Frame Speed:** 2 bytes indicating frame duration in milliseconds.
+
+### 9.2. 16x16 Tiled Macroblock Layout
+Unlike conventional image formats that store pixels in consecutive scanlines from row 0 to 63:
+* Divoom 64x64 binary assets divide the matrix into **16 macroblock tiles of 16x16 pixels**, arranged in a 4x4 grid.
+* Within each 16x16 tile, pixels are indexed row-major from `0..15` and `0..15`.
+* To convert the decoded palette indices into a standard 12,288-byte RGB frame for `Draw/SendHttpGif`:
+  $$\text{Global } X = (\text{tileIndex} \pmod 4) \times 16 + \text{tile } x$$
+  $$\text{Global } Y = (\lfloor\text{tileIndex} / 4\rfloor) \times 16 + \text{tile } y$$
+  $$\text{Buffer Offset} = (\text{Global } Y \times 64 + \text{Global } X) \times 3$$
+
+`jixoo64` implements a pure Java 21 decoder (`DivoomAssetDecoder`) requiring zero external dependencies to unpack and untangle these binary assets directly into displayable RGB buffers.
+

@@ -1,6 +1,6 @@
 ---
 name: pixoo64
-description: Interact with Divoom Pixoo 64 devices to display images, videos, text, colors, change channels, run hardware tools (stopwatch, timer, scoreboard, noise meter), sync time, and configure device settings. Includes AI generation tools for Gemini.
+description: Interact with Divoom Pixoo 64 devices to display images, videos, text, colors, change channels, run hardware tools (stopwatch, timer, scoreboard, noise meter, pomodoro, alarms, countdowns), sync time, query live weather, search and stream cloud pixel art, and configure device settings. Includes AI generation tools for Gemini.
 license: Apache-2.0
 compatibility: Requires pixoo-cli to be installed and available in the system PATH.
 ---
@@ -14,14 +14,17 @@ If the user does not have it installed, you can download the pre-compiled binary
 ## 1. Controlling the Device
 
 You can use the `pixoo-cli` tool to directly control the Pixoo 64 device. The CLI provides a wide variety of commands to:
-- Change channels, set startup boot channel, select clock faces, or switch custom gallery page slots
-- Set brightness, query screen state (`screen status`), and toggle screen on/off
-- Control hardware tools: digital stopwatch, countdown timer, dual scoreboard (Blue vs Red), and ambient noise decibel meter
+- Change channels, set startup boot channel, select or browse clock faces (`channel clock-face top`), or switch custom gallery page slots
+- Set brightness, query screen state (`screen status`), toggle screen on/off, and configure delayed sleep timers (`screen sleep`)
+- Control hardware tools: digital stopwatch, countdown timer, dual scoreboard (Blue vs Red), ambient noise decibel meter, Pomodoro focus timer (`tool pomodoro`), hardware alarms (`tool alarm`), and countdowns (`tool countdown`)
 - Synchronize hardware real-time clock (`time sync`)
+- Query live weather and 5-day forecasts via zero-auth weather proxy (`weather current`, `weather forecast`)
+- Discover, search, download, and directly stream/play community pixel art from Divoom Cloud (`cloud browse`, `cloud search`, `cloud artist`, `cloud play`)
 - Inspect and configure system settings (`config get` / `config set`: 12/24h, Celsius/Fahrenheit, date format, mirror mode, auto-off)
 - Draw text overlays, display solid colors, render static images, and play animated GIFs
 - Trigger piezoelectric buzzer sound rhythms
 - Manage Divoom Cloud integration, persistent flash custom channel playlists, and gallery uploads
+
 
 When you need to execute a command, first ensure you know the device IP address, which the user can provide or which can be discovered using the `discover` subcommand if on the same local network.
 

@@ -27,6 +27,7 @@ import io.github.glaforge.jixoo.model.command.PixooCommand;
 import io.github.glaforge.jixoo.model.sys.ChannelConfig;
 import io.github.glaforge.jixoo.model.sys.SysConfig;
 import io.github.glaforge.jixoo.model.tool.NoiseStatus;
+import io.github.glaforge.jixoo.model.tool.PixooAlarm;
 import io.github.glaforge.jixoo.model.tool.ScoreboardStatus;
 import io.github.glaforge.jixoo.model.tool.StopwatchAction;
 import io.github.glaforge.jixoo.model.tool.StopwatchStatus;
@@ -38,6 +39,7 @@ import java.nio.file.Path;
 import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Main interface for interacting with the Divoom Pixoo64 display.
@@ -464,7 +466,121 @@ public interface PixooClient extends AutoCloseable {
      *
      * @return true if full, false otherwise
      */
-    boolean isStorageFull();
+     boolean isStorageFull();
+
+    /**
+     * Sets the auto sleep timer in minutes until the display turns off.
+     * Pass 0 to cancel/disable.
+     *
+     * @param minutes minutes until screen shuts down (0 to disable)
+     * @return the device's response
+     */
+    PixooResponse setSleepTimer(int minutes);
+
+    /**
+     * Gets the remaining sleep timer minutes.
+     *
+     * @return remaining minutes, or 0 if disabled
+     */
+    int getSleepTimer();
+
+    /**
+     * Configures a Pomodoro focus timer preset.
+     *
+     * @param id preset ID
+     * @param name preset name
+     * @param workMinutes duration of work session in minutes
+     * @param shortRestMinutes duration of short rest in minutes
+     * @param longRestMinutes duration of long rest in minutes
+     * @return the device's response
+     */
+    PixooResponse setPomodoro(int id, String name, int workMinutes, int shortRestMinutes, int longRestMinutes);
+
+    /**
+     * Configures default Pomodoro focus timer preset (id 0).
+     *
+     * @param workMinutes duration of work session in minutes
+     * @param shortRestMinutes duration of short rest in minutes
+     * @param longRestMinutes duration of long rest in minutes
+     * @return the device's response
+     */
+    default PixooResponse setPomodoro(int workMinutes, int shortRestMinutes, int longRestMinutes) {
+        return setPomodoro(0, "Pomodoro", workMinutes, shortRestMinutes, longRestMinutes);
+    }
+
+    /**
+     * Starts a configured Pomodoro focus timer by ID.
+     *
+     * @param id preset ID
+     * @return the device's response
+     */
+    PixooResponse startPomodoro(int id);
+
+    /**
+     * Starts the default Pomodoro focus timer (id 0).
+     *
+     * @return the device's response
+     */
+    default PixooResponse startPomodoro() {
+        return startPomodoro(0);
+    }
+
+    /**
+     * Retrieves the list of scheduled alarms on the device.
+     *
+     * @return list of alarms
+     */
+    List<PixooAlarm> getAlarms();
+
+    /**
+     * Configures an alarm on the device.
+     *
+     * @param alarm the alarm configuration
+     * @return the device's response
+     */
+    PixooResponse setAlarm(PixooAlarm alarm);
+
+    /**
+     * Deletes an alarm by ID.
+     *
+     * @param alarmId the alarm ID to delete
+     * @return the device's response
+     */
+    PixooResponse deleteAlarm(int alarmId);
+
+    /**
+     * Configures a memorial day countdown on the device.
+     *
+     * @param id memorial event ID
+     * @param name event title / description
+     * @param month target month (1-12)
+     * @param day target day of month (1-31)
+     * @param hour target hour of day (0-23)
+     * @param minute target minute of hour (0-59)
+     * @return the device's response
+     */
+    PixooResponse setMemorial(int id, String name, int month, int day, int hour, int minute);
+
+    /**
+     * Configures a memorial day countdown on the device (defaulting to 00:00).
+     *
+     * @param id memorial event ID
+     * @param name event title / description
+     * @param month target month (1-12)
+     * @param day target day of month (1-31)
+     * @return the device's response
+     */
+    default PixooResponse setMemorial(int id, String name, int month, int day) {
+        return setMemorial(id, name, month, day, 0, 0);
+    }
+
+    /**
+     * Deletes a memorial day countdown by ID.
+     *
+     * @param memorialId the memorial ID to delete
+     * @return the device's response
+     */
+    PixooResponse deleteMemorial(int memorialId);
 
     /**
      * Builder class for constructing {@link PixooClient} instances.

@@ -191,7 +191,7 @@ public final class GifDecoder {
 
                 // Read all data sub-blocks
                 byte[] lzwData = readSubBlocks(data, pos);
-                pos += lzwData.length + countSubBlockOverhead(data, pos);
+                pos += countSubBlockTotalBytes(data, pos);
 
                 // Decompress LZW pixels
                 byte[] pixelIndices = lzwDecompress(lzwData, lzwMinCodeSize, imageWidth * imageHeight);
@@ -206,6 +206,7 @@ public final class GifDecoder {
                         interlace, activeColorTable, hasTransparency, transparentColorIndex,
                         currentCanvas
                 );
+
 
                 // Resize current canvas to 64x64 PixooImage
                 PixooImage rawImg = new PixooImage(canvasWidth, canvasHeight, currentCanvas);
@@ -343,15 +344,16 @@ public final class GifDecoder {
         return result;
     }
 
-    private static int countSubBlockOverhead(byte[] data, int offset) {
+    private static int countSubBlockTotalBytes(byte[] data, int offset) {
         int pos = offset;
         while (pos < data.length && (data[pos] & 0xFF) != 0) {
             int len = data[pos] & 0xFF;
             pos += 1 + len;
         }
         if (pos < data.length) pos++; // account for trailing 0x00
-        return pos - offset - (offset < data.length ? 0 : 0);
+        return pos - offset;
     }
+
 
     /**
      * Decompresses LZW-compressed GIF image stream into pixel color indices.
@@ -380,6 +382,7 @@ public final class GifDecoder {
         int outPos = 0;
         int top = 0;
         int oldCode = -1;
+        int firstChar = 0;
 
         while (outPos < expectedLength) {
             if (top == 0) {
@@ -407,14 +410,15 @@ public final class GifDecoder {
 
                 if (oldCode == -1) {
                     if (code >= available) code = 0;
-                    output[outPos++] = suffix[code];
+                    firstChar = suffix[code] & 0xFF;
+                    output[outPos++] = (byte) firstChar;
                     oldCode = code;
                     continue;
                 }
 
                 int inCode = code;
                 if (code >= available) {
-                    pixelStack[top++] = (byte) suffix[oldCode];
+                    pixelStack[top++] = (byte) firstChar;
                     code = oldCode;
                 }
 
@@ -422,11 +426,12 @@ public final class GifDecoder {
                     pixelStack[top++] = suffix[code];
                     code = prefix[code];
                 }
-                pixelStack[top++] = suffix[code];
+                firstChar = suffix[code] & 0xFF;
+                pixelStack[top++] = (byte) firstChar;
 
                 if (available < 4096) {
                     prefix[available] = oldCode;
-                    suffix[available] = suffix[code];
+                    suffix[available] = (byte) firstChar;
                     available++;
                     if (available >= maxCode && codeSize < 12) {
                         codeSize++;

@@ -18,6 +18,7 @@ package io.github.glaforge.jixoo.internal;
 import io.github.glaforge.jixoo.api.*;
 import io.github.glaforge.jixoo.model.PixooAnimation;
 import io.github.glaforge.jixoo.model.PixooFrame;
+import io.github.glaforge.jixoo.model.tool.PixooAlarm;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -56,6 +57,11 @@ class HttpPixooClientIntegrationTest {
                 }
 
                 String response = "{\"error_code\": 0}";
+                if (body.contains("Device/GetDelayPowerOff")) {
+                    response = "{\"error_code\": 0, \"DelayPowerOff\": 15}";
+                } else if (body.contains("Alarm/Get")) {
+                    response = "{\"error_code\": 0, \"AlarmList\": [{\"AlarmId\": 1, \"AlarmName\": \"Wakeup\", \"AlarmTime\": 25200, \"EnableFlag\": 1, \"RepeatArray\": [1,2,3,4,5], \"Volume\": 80, \"SoundType\": 1}]}";
+                }
                 exchange.getResponseHeaders().set("Content-Type", "application/json");
                 exchange.sendResponseHeaders(200, response.length());
                 OutputStream os = exchange.getResponseBody();
@@ -302,5 +308,93 @@ class HttpPixooClientIntegrationTest {
         assertThrows(IllegalArgumentException.class, () -> PixooClient.parseHexRgb("blue"));
         assertThrows(IllegalArgumentException.class, () -> PixooClient.parseHexRgb("#ZZZZZZ"));
         assertThrows(IllegalArgumentException.class, () -> PixooClient.parseHexRgb("#1234"));
+    }
+
+    @Test
+    void testSleepTimer() {
+        PixooClient client = PixooClient.builder()
+                .ipAddress("127.0.0.1")
+                .port(port)
+                .autoSwitchToCustomChannel(false)
+                .build();
+
+        PixooResponse setResp = client.setSleepTimer(15);
+        assertTrue(setResp.isSuccess());
+
+        int delay = client.getSleepTimer();
+        assertEquals(15, delay);
+
+        synchronized (receivedRequests) {
+            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Device/SetDelayPowerOff") && req.contains("\"DelayPowerOff\":15")));
+            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Device/GetDelayPowerOff")));
+        }
+    }
+
+    @Test
+    void testPomodoro() {
+        PixooClient client = PixooClient.builder()
+                .ipAddress("127.0.0.1")
+                .port(port)
+                .autoSwitchToCustomChannel(false)
+                .build();
+
+        PixooResponse setResp = client.setPomodoro(25, 5, 15);
+        assertTrue(setResp.isSuccess());
+
+        PixooResponse startResp = client.startPomodoro();
+        assertTrue(startResp.isSuccess());
+
+        synchronized (receivedRequests) {
+            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Tomato/Set") && req.contains("\"WorkTime\":25")));
+            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Tomato/Start") && req.contains("\"TomatoId\":0")));
+        }
+    }
+
+    @Test
+    void testAlarmManagement() {
+        PixooClient client = PixooClient.builder()
+                .ipAddress("127.0.0.1")
+                .port(port)
+                .autoSwitchToCustomChannel(false)
+                .build();
+
+        PixooAlarm alarm = PixooAlarm.of(1, "Wakeup", 7, 0, List.of(1, 2, 3, 4, 5));
+        PixooResponse setResp = client.setAlarm(alarm);
+        assertTrue(setResp.isSuccess());
+
+        List<PixooAlarm> alarms = client.getAlarms();
+        assertEquals(1, alarms.size());
+        assertEquals("Wakeup", alarms.get(0).alarmName());
+        assertEquals(1, alarms.get(0).alarmId());
+        assertTrue(alarms.get(0).isEnabled());
+
+        PixooResponse delResp = client.deleteAlarm(1);
+        assertTrue(delResp.isSuccess());
+
+        synchronized (receivedRequests) {
+            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Alarm/Set") && req.contains("\"AlarmName\":\"Wakeup\"")));
+            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Alarm/Get")));
+            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Alarm/Del") && req.contains("\"AlarmId\":1")));
+        }
+    }
+
+    @Test
+    void testMemorialManagement() {
+        PixooClient client = PixooClient.builder()
+                .ipAddress("127.0.0.1")
+                .port(port)
+                .autoSwitchToCustomChannel(false)
+                .build();
+
+        PixooResponse setResp = client.setMemorial(1, "Birthday", 10, 25, 12, 0);
+        assertTrue(setResp.isSuccess());
+
+        PixooResponse delResp = client.deleteMemorial(1);
+        assertTrue(delResp.isSuccess());
+
+        synchronized (receivedRequests) {
+            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Memorial/Set") && req.contains("\"MemorialName\":\"Birthday\"") && req.contains("\"MemorialMoon\":10") && req.contains("\"MemorialTime\":720")));
+            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Memorial/Del") && req.contains("\"MemorialId\":1")));
+        }
     }
 }
