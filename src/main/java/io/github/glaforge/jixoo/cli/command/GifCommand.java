@@ -59,6 +59,12 @@ public class GifCommand implements Callable<Integer> {
     )
     private String gifUrl;
 
+    @Option(
+            names = {"--direct"},
+            description = "Direct device firmware to fetch URL directly via Device/PlayTFGif (WARNING: can crash device on high-res GIFs or complex HTTPS)"
+    )
+    private boolean direct;
+
     @Override
     public Integer call() {
         if ((gifFilePath == null || gifFilePath.isBlank()) && (gifUrl == null || gifUrl.isBlank())) {
@@ -83,8 +89,18 @@ public class GifCommand implements Callable<Integer> {
             spec.commandLine().getOut().printf("Decoding and uploading GIF file: %s...%n", path.getFileName());
             response = client.sendGif(path);
         } else {
-            spec.commandLine().getOut().printf("Directing Pixoo 64 to download and render remote GIF from URL: %s...%n", gifUrl);
-            response = client.sendRemoteGifUrl(gifUrl);
+            if (direct) {
+                spec.commandLine().getOut().printf("Directing Pixoo 64 firmware to download and render remote GIF from URL: %s...%n", gifUrl);
+                response = client.sendRemoteGifUrl(gifUrl);
+            } else {
+                spec.commandLine().getOut().printf("Downloading, scaling to 64x64, and streaming remote GIF from URL: %s...%n", gifUrl);
+                try {
+                    response = client.sendGifUrl(gifUrl);
+                } catch (Exception e) {
+                    spec.commandLine().getErr().printf("Failed to download or stream GIF: %s%n", e.getMessage());
+                    return 1;
+                }
+            }
         }
 
         if (response.isSuccess()) {

@@ -35,8 +35,13 @@ import io.github.glaforge.jixoo.model.tool.TimerStatus;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.nio.file.Path;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -251,7 +256,58 @@ public interface PixooClient extends AutoCloseable {
     }
 
     /**
+     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URI.
+     * The GIF is downloaded and scaled on the host machine before streaming to the device,
+     * avoiding firmware crashes, out-of-memory errors, and TLS incompatibilities on the ESP32 microcontroller.
+     *
+     * @param gifUri the HTTP/HTTPS URI of the GIF
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(URI gifUri) {
+        try {
+            HttpClient httpClient = HttpClient.newBuilder()
+                    .followRedirects(HttpClient.Redirect.NORMAL)
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .build();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(gifUri)
+                    .header("User-Agent", "Mozilla/5.0 (compatible; Jixoo64/0.2)")
+                    .timeout(Duration.ofSeconds(15))
+                    .GET()
+                    .build();
+            HttpResponse<byte[]> resp = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
+                throw new io.github.glaforge.jixoo.api.exception.PixooException(
+                        "Failed to download GIF from " + gifUri + ": HTTP " + resp.statusCode());
+            }
+            return sendGif(new ByteArrayInputStream(resp.body()));
+        } catch (io.github.glaforge.jixoo.api.exception.PixooException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new io.github.glaforge.jixoo.api.exception.PixooException(
+                    "Error fetching remote GIF from " + gifUri + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URL string.
+     * The GIF is downloaded and scaled on the host machine before streaming to the device,
+     * avoiding firmware crashes, out-of-memory errors, and TLS incompatibilities on the ESP32 microcontroller.
+     *
+     * @param gifUrl the HTTP/HTTPS URL string of the GIF
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGifUrl(String gifUrl) {
+        return sendGif(URI.create(gifUrl));
+    }
+
+    /**
      * Instructs the Pixoo64 to download and render a GIF from a remote URL.
+     * <p>
+     * <b>Note:</b> This instructs the device's embedded ESP32 microcontroller to download the GIF directly.
+     * Because the ESP32 has limited memory and a minimal TLS stack, high-resolution GIFs (such as &gt;64x64)
+     * or complex HTTPS endpoints will cause the device to crash and reboot.
+     * For reliable playback, prefer {@link #sendGif(URI)} or {@link #sendGifUrl(String)}.
      *
      * @param gifUrl the HTTP/HTTPS URL of the GIF
      * @return the device's response
