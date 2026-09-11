@@ -548,7 +548,7 @@ public sealed interface PixooCommand permits
         @Override
         @JsonProperty("Command")
         public String command() {
-            return "Alarm/Get";
+            return "Device/GetAlarm";
         }
     }
 
@@ -565,7 +565,7 @@ public sealed interface PixooCommand permits
         @Override
         @JsonProperty("Command")
         public String command() {
-            return "Alarm/Set";
+            return "Device/SetAlarm";
         }
     }
 

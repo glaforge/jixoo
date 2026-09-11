@@ -544,13 +544,26 @@ public class DivoomCloudClient implements AutoCloseable {
      * @return creator's public artwork gallery
      */
     public CloudGalleryResponse getArtistArtworks(long artistUserId, int startNum, int endNum) {
+        return getArtistArtworks(artistUserId, 4, startNum, endNum);
+    }
+
+    /**
+     * Retrieves public artworks uploaded by an artist / creator filtered by target resolution.
+     *
+     * @param artistUserId user ID of the creator
+     * @param fileSize     resolution filter (4 for 64x64, 127 for all resolutions)
+     * @param startNum     pagination start offset (1-based)
+     * @param endNum       pagination end offset (inclusive)
+     * @return creator's public artwork gallery
+     */
+    public CloudGalleryResponse getArtistArtworks(long artistUserId, int fileSize, int startNum, int endNum) {
         int actualStart = Math.max(1, startNum);
         int actualEnd = Math.max(actualStart, endNum);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("SomeOneUserId", artistUserId);
         body.put("ShowAllFlag", 1);
         body.put("Classify", 0);
-        body.put("FileSize", 127);
+        body.put("FileSize", fileSize);
         body.put("FileType", 5);
         body.put("FileSort", 0);
         body.put("RefreshIndex", 0);

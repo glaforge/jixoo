@@ -59,7 +59,7 @@ class HttpPixooClientIntegrationTest {
                 String response = "{\"error_code\": 0}";
                 if (body.contains("Device/GetDelayPowerOff")) {
                     response = "{\"error_code\": 0, \"DelayPowerOff\": 15}";
-                } else if (body.contains("Alarm/Get")) {
+                } else if (body.contains("Device/GetAlarm") || body.contains("Alarm/Get")) {
                     response = "{\"error_code\": 0, \"AlarmList\": [{\"AlarmId\": 1, \"AlarmName\": \"Wakeup\", \"AlarmTime\": 25200, \"EnableFlag\": 1, \"RepeatArray\": [1,2,3,4,5], \"Volume\": 80, \"SoundType\": 1}]}";
                 }
                 exchange.getResponseHeaders().set("Content-Type", "application/json");
@@ -372,8 +372,8 @@ class HttpPixooClientIntegrationTest {
         assertTrue(delResp.isSuccess());
 
         synchronized (receivedRequests) {
-            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Alarm/Set") && req.contains("\"AlarmName\":\"Wakeup\"")));
-            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Alarm/Get")));
+            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Device/SetAlarm") && req.contains("\"AlarmName\":\"Wakeup\"")));
+            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Device/GetAlarm")));
             assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Alarm/Del") && req.contains("\"AlarmId\":1")));
         }
     }

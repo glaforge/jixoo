@@ -634,18 +634,23 @@ public class CloudCommand implements Callable<Integer> {
         @Option(names = {"--end"}, defaultValue = "19", description = "Ending artwork index (default: 19)")
         private int end;
 
+        @Option(names = {"--all-sizes"}, description = "Include all matrix sizes instead of 64x64 only (default: false)")
+        private boolean allSizes;
+
         @Override
         public Integer call() {
             try (DivoomCloudClient client = new DivoomCloudClient()) {
                 ArtistProfile profile = client.getArtistProfile(artistId);
-                System.out.printf("Artist: %s (ID: %d)%n", profile.userName() != null ? profile.userName() : "Unknown", profile.userId());
+                long displayId = profile.userId() != 0 ? profile.userId() : artistId;
+                System.out.printf("Artist: %s (ID: %d)%n", profile.userName() != null ? profile.userName() : "Unknown", displayId);
                 if (profile.bio() != null && !profile.bio().isBlank()) {
                     System.out.printf("  Bio:       %s%n", profile.bio());
                 }
                 System.out.printf("  Followers: %d | Following: %d%n", profile.followerCount(), profile.followingCount());
                 System.out.println();
 
-                CloudGalleryResponse resp = client.getArtistArtworks(artistId, start, end);
+                int fileSize = allSizes ? 127 : 4;
+                CloudGalleryResponse resp = client.getArtistArtworks(artistId, fileSize, start, end);
                 printGalleryItems("Artworks by " + (profile.userName() != null ? profile.userName() : "Artist " + artistId), resp.getItems());
                 return 0;
             } catch (Exception e) {
