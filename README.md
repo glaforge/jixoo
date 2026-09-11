@@ -210,14 +210,20 @@ pixoo-cli color 23ED23
 
 #### 12. Display Static Images & Animated GIFs
 ```bash
-# Display image file (auto-resized and centered)
+# Display image file (auto-resized and centered with black bars if rectangular)
 pixoo-cli image path/to/artwork.png
+
+# Display image cropped to square (no black bars)
+pixoo-cli image --crop path/to/photo.jpg
 
 # Display local animated GIF
 pixoo-cli gif --file path/to/animation.gif
 
-# Stream remote HTTP GIF
+# Stream remote HTTP/HTTPS GIF (auto-downloaded, scaled, and streamed client-side)
 pixoo-cli gif --url "http://example.com/animation.gif"
+
+# Stream remote GIF cropped to square (filling the entire 64x64 canvas)
+pixoo-cli gif --crop --url "https://example.com/nyan-cat.gif"
 ```
 
 #### 13. Divoom Cloud Discovery, Community Art & Playback (`cloud`)

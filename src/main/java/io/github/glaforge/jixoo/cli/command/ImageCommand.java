@@ -48,6 +48,18 @@ public class ImageCommand implements Callable<Integer> {
     @ParentCommand
     private PixooCli parent;
 
+    @Option(
+            names = {"-c", "--crop"},
+            description = "Crop rectangular images to fill the 64x64 screen without letterbox black bars"
+    )
+    private boolean crop;
+
+    @Option(
+            names = {"-s", "--scale-mode"},
+            description = "Scale mode for fitting onto 64x64 canvas: FIT_CENTER, FILL_CROP, STRETCH"
+    )
+    private io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode scaleMode;
+
     @Parameters(
             index = "0",
             description = "Path to the image file (e.g., image.png, photo.jpg)"
@@ -62,9 +74,14 @@ public class ImageCommand implements Callable<Integer> {
             return 1;
         }
 
+        io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode mode = scaleMode != null
+                ? scaleMode
+                : (crop ? io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode.FILL_CROP
+                        : io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode.FIT_CENTER);
+
         PixooClient client = parent.createClient();
-        spec.commandLine().getOut().printf("Processing and sending image: %s...%n", path.getFileName());
-        PixooResponse response = client.sendImage(path);
+        spec.commandLine().getOut().printf("Processing and sending image: %s (%s)...%n", path.getFileName(), mode);
+        PixooResponse response = client.sendImage(path, mode);
         if (response.isSuccess()) {
             spec.commandLine().getOut().printf("Successfully displayed image: %s.%n", path.getFileName());
             return 0;

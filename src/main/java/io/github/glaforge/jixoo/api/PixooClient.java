@@ -211,52 +211,113 @@ public interface PixooClient extends AutoCloseable {
      * @param image the image to process and send
      * @return the device's response
      */
+    /**
+     * Resizes and sends a static PixooImage to the display using FIT_CENTER.
+     *
+     * @param image the image to process and send
+     * @return the device's response
+     */
     default PixooResponse sendImage(PixooImage image) {
-        return sendAnimation(ImageProcessor.processImage(image));
+        return sendImage(image, ImageProcessor.ScaleMode.FIT_CENTER);
     }
 
     /**
-     * Resizes and sends a static BufferedImage to the display.
+     * Resizes and sends a static PixooImage to the display with the specified scaling mode.
+     *
+     * @param image     the image to process and send
+     * @param scaleMode the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @return the device's response
+     */
+    default PixooResponse sendImage(PixooImage image, ImageProcessor.ScaleMode scaleMode) {
+        return sendAnimation(ImageProcessor.processImage(image, scaleMode));
+    }
+
+    /**
+     * Resizes and sends a static BufferedImage to the display using FIT_CENTER.
      *
      * @param image the image to process and send
      * @return the device's response
      */
     default PixooResponse sendImage(BufferedImage image) {
-        return sendImage(PixooImage.fromBufferedImage(image));
+        return sendImage(PixooImage.fromBufferedImage(image), ImageProcessor.ScaleMode.FIT_CENTER);
     }
 
     /**
-     * Loads, resizes, and sends an image file from a Path to the display using pure-Java decoders.
+     * Resizes and sends a static BufferedImage to the display with the specified scaling mode.
+     *
+     * @param image     the image to process and send
+     * @param scaleMode the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @return the device's response
+     */
+    default PixooResponse sendImage(BufferedImage image, ImageProcessor.ScaleMode scaleMode) {
+        return sendImage(PixooImage.fromBufferedImage(image), scaleMode);
+    }
+
+    /**
+     * Loads, resizes, and sends an image file from a Path to the display using FIT_CENTER.
      *
      * @param path the path to the image file
      * @return the device's response
      */
     default PixooResponse sendImage(Path path) {
-        return sendImage(ImageProcessor.loadImage(path));
+        return sendImage(path, ImageProcessor.ScaleMode.FIT_CENTER);
     }
 
     /**
-     * Decodes and displays an animated or static GIF from an InputStream.
+     * Loads, resizes, and sends an image file from a Path to the display with the specified scaling mode.
+     *
+     * @param path      the path to the image file
+     * @param scaleMode the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @return the device's response
+     */
+    default PixooResponse sendImage(Path path, ImageProcessor.ScaleMode scaleMode) {
+        return sendImage(ImageProcessor.loadImage(path), scaleMode);
+    }
+
+    /**
+     * Decodes and displays an animated or static GIF from an InputStream using FIT_CENTER.
      *
      * @param gifStream the input stream containing the GIF data
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(InputStream gifStream) {
-        return sendAnimation(GifDecoder.decode(gifStream));
+        return sendGif(gifStream, ImageProcessor.ScaleMode.FIT_CENTER);
     }
 
     /**
-     * Decodes and displays an animated or static GIF from a Path.
+     * Decodes and displays an animated or static GIF from an InputStream with the specified scaling mode.
+     *
+     * @param gifStream the input stream containing the GIF data
+     * @param scaleMode the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(InputStream gifStream, ImageProcessor.ScaleMode scaleMode) {
+        return sendAnimation(GifDecoder.decode(gifStream, scaleMode));
+    }
+
+    /**
+     * Decodes and displays an animated or static GIF from a Path using FIT_CENTER.
      *
      * @param gifPath the path to the GIF file
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(Path gifPath) {
-        return sendAnimation(GifDecoder.decode(gifPath));
+        return sendGif(gifPath, ImageProcessor.ScaleMode.FIT_CENTER);
     }
 
     /**
-     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URI.
+     * Decodes and displays an animated or static GIF from a Path with the specified scaling mode.
+     *
+     * @param gifPath   the path to the GIF file
+     * @param scaleMode the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(Path gifPath, ImageProcessor.ScaleMode scaleMode) {
+        return sendAnimation(GifDecoder.decode(gifPath, scaleMode));
+    }
+
+    /**
+     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URI using FIT_CENTER.
      * The GIF is downloaded and scaled on the host machine before streaming to the device,
      * avoiding firmware crashes, out-of-memory errors, and TLS incompatibilities on the ESP32 microcontroller.
      *
@@ -264,6 +325,19 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(URI gifUri) {
+        return sendGif(gifUri, ImageProcessor.ScaleMode.FIT_CENTER);
+    }
+
+    /**
+     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URI with the specified scaling mode.
+     * The GIF is downloaded and scaled on the host machine before streaming to the device,
+     * avoiding firmware crashes, out-of-memory errors, and TLS incompatibilities on the ESP32 microcontroller.
+     *
+     * @param gifUri    the HTTP/HTTPS URI of the GIF
+     * @param scaleMode the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(URI gifUri, ImageProcessor.ScaleMode scaleMode) {
         try {
             HttpClient httpClient = HttpClient.newBuilder()
                     .followRedirects(HttpClient.Redirect.NORMAL)
@@ -280,7 +354,7 @@ public interface PixooClient extends AutoCloseable {
                 throw new io.github.glaforge.jixoo.api.exception.PixooException(
                         "Failed to download GIF from " + gifUri + ": HTTP " + resp.statusCode());
             }
-            return sendGif(new ByteArrayInputStream(resp.body()));
+            return sendGif(new ByteArrayInputStream(resp.body()), scaleMode);
         } catch (io.github.glaforge.jixoo.api.exception.PixooException e) {
             throw e;
         } catch (Exception e) {
@@ -290,15 +364,24 @@ public interface PixooClient extends AutoCloseable {
     }
 
     /**
-     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URL string.
-     * The GIF is downloaded and scaled on the host machine before streaming to the device,
-     * avoiding firmware crashes, out-of-memory errors, and TLS incompatibilities on the ESP32 microcontroller.
+     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URL string using FIT_CENTER.
      *
      * @param gifUrl the HTTP/HTTPS URL string of the GIF
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGifUrl(String gifUrl) {
-        return sendGif(URI.create(gifUrl));
+        return sendGifUrl(gifUrl, ImageProcessor.ScaleMode.FIT_CENTER);
+    }
+
+    /**
+     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URL string with the specified scaling mode.
+     *
+     * @param gifUrl    the HTTP/HTTPS URL string of the GIF
+     * @param scaleMode the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGifUrl(String gifUrl, ImageProcessor.ScaleMode scaleMode) {
+        return sendGif(URI.create(gifUrl), scaleMode);
     }
 
     /**

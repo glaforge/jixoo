@@ -36,16 +36,30 @@ public final class GifDecoder {
     private GifDecoder() {}
 
     /**
-     * Decodes a GIF file or stream into a {@link PixooAnimation} with exact per-frame delays.
+     * Decodes a GIF file or stream into a {@link PixooAnimation} with exact per-frame delays,
+     * using {@link ImageProcessor.ScaleMode#FIT_CENTER}.
      *
      * @param inputStream the stream containing the GIF data
      * @return a PixooAnimation containing the GIF frames
      * @throws PixooException if decoding fails
      */
     public static PixooAnimation decode(InputStream inputStream) {
+        return decode(inputStream, ImageProcessor.ScaleMode.FIT_CENTER);
+    }
+
+    /**
+     * Decodes a GIF file or stream into a {@link PixooAnimation} with exact per-frame delays
+     * and specified scaling mode (e.g. FILL_CROP to crop to square without black bars).
+     *
+     * @param inputStream the stream containing the GIF data
+     * @param scaleMode   the scaling mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @return a PixooAnimation containing the GIF frames
+     * @throws PixooException if decoding fails
+     */
+    public static PixooAnimation decode(InputStream inputStream, ImageProcessor.ScaleMode scaleMode) {
         try {
             byte[] bytes = inputStream.readAllBytes();
-            return decode(bytes);
+            return decode(bytes, scaleMode);
         } catch (PixooException e) {
             throw e;
         } catch (Exception e) {
@@ -54,15 +68,29 @@ public final class GifDecoder {
     }
 
     /**
-     * Decodes a GIF file from the specified path into a {@link PixooAnimation}.
+     * Decodes a GIF file from the specified path into a {@link PixooAnimation}
+     * using {@link ImageProcessor.ScaleMode#FIT_CENTER}.
      *
      * @param path the path to the GIF file
      * @return a PixooAnimation containing the GIF frames
      * @throws PixooException if reading or decoding fails
      */
     public static PixooAnimation decode(Path path) {
+        return decode(path, ImageProcessor.ScaleMode.FIT_CENTER);
+    }
+
+    /**
+     * Decodes a GIF file from the specified path into a {@link PixooAnimation}
+     * with specified scaling mode.
+     *
+     * @param path      the path to the GIF file
+     * @param scaleMode the scaling mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @return a PixooAnimation containing the GIF frames
+     * @throws PixooException if reading or decoding fails
+     */
+    public static PixooAnimation decode(Path path, ImageProcessor.ScaleMode scaleMode) {
         try (InputStream is = Files.newInputStream(path)) {
-            return decode(is);
+            return decode(is, scaleMode);
         } catch (PixooException e) {
             throw e;
         } catch (Exception e) {
@@ -71,9 +99,17 @@ public final class GifDecoder {
     }
 
     /**
-     * Decodes GIF bytes directly into a PixooAnimation.
+     * Decodes GIF bytes directly into a PixooAnimation using {@link ImageProcessor.ScaleMode#FIT_CENTER}.
      */
     public static PixooAnimation decode(byte[] data) {
+        return decode(data, ImageProcessor.ScaleMode.FIT_CENTER);
+    }
+
+    /**
+     * Decodes GIF bytes directly into a PixooAnimation with specified scaling mode.
+     */
+    public static PixooAnimation decode(byte[] data, ImageProcessor.ScaleMode scaleMode) {
+        ImageProcessor.ScaleMode mode = scaleMode != null ? scaleMode : ImageProcessor.ScaleMode.FIT_CENTER;
         if (data == null || data.length < 13) {
             throw new PixooException("Invalid GIF: Data stream too short");
         }
@@ -210,7 +246,7 @@ public final class GifDecoder {
 
                 // Resize current canvas to 64x64 PixooImage
                 PixooImage rawImg = new PixooImage(canvasWidth, canvasHeight, currentCanvas);
-                PixooImage fitted = rawImg.resizeAndFit(64, 64, ImageProcessor.ScaleMode.FIT_CENTER);
+                PixooImage fitted = rawImg.resizeAndFit(64, 64, mode);
                 frames.add(new PixooFrame(fitted.toRawRgb(), delayMs));
 
                 // Update master canvas for next frame according to disposal method
