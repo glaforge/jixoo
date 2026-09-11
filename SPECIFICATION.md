@@ -20,8 +20,8 @@ The Divoom Pixoo 64 communicates over local Wi-Fi via an embedded HTTP server ru
 
 > [!IMPORTANT]
 > **HTTP/1.1 Enforcement & JSON Key Order Constraints:**
-> 1. The ESP32 embedded web server on the Pixoo 64 does not support HTTP/2 upgrades or ALPN negotiations. Modern HTTP clients (such as Java 21 `HttpClient`) that default to HTTP/2 will receive an **`HTTP 400 Bad Request`** error from the device. All client implementations **must explicitly force HTTP/1.1**.
-> 2. The Pixoo 64 firmware uses a lightweight C JSON parser (such as cJSON) that expects the `"Command"` key to be the **very first field** in the JSON request payload. Placing `"Command"` after large payload fields (e.g. after a 16KB Base64 `PicData` string) will cause parsing failures or silent command drops. All commands must serialize `@JsonPropertyOrder({"Command", ...})` first.
+> 1. The ESP32 embedded web server on the Pixoo 64 does not support HTTP/2 upgrades or ALPN negotiations. HTTP clients that attempt HTTP/2 negotiations will receive an **`HTTP 400 Bad Request`** error from the device. All client implementations **must explicitly force HTTP/1.1**.
+> 2. The Pixoo 64 firmware uses a lightweight C JSON parser (such as cJSON) that expects the `"Command"` key to be the **very first field** in the JSON request payload. Placing `"Command"` after large payload fields (e.g. after a 16KB Base64 `PicData` string) will cause parsing failures or silent command drops. All client implementations must ensure `"Command"` is serialized as the first property in the JSON object.
 
 ---
 
@@ -206,7 +206,7 @@ Controls the physical screen LED power state (standby vs active).
   * `0`: Turn Screen **OFF** (standby / display asleep)
 
 > [!NOTE]
-> In official Divoom Android APK sources (`WifiChannelModel.java`, `DiscoverMainFragment.java`), `1` activates the screen and `0` puts it in standby. Some legacy community reverse-engineering notes inverted this; `jixoo64` implements the official firmware convention.
+> In official Divoom firmware and client protocols, `1` activates the screen and `0` puts it in standby. Some legacy community reverse-engineering notes previously inverted this convention.
 
 ---
 
@@ -726,7 +726,7 @@ Directs the device to download and play an animation from a remote HTTP URL.
 > **Hardware OOM & Firmware Crash Hazard:**
 > The ESP32 microcontroller in the Pixoo 64 has limited SRAM (~320KB allocatable) and cannot handle on-chip decoding of high-resolution GIF files (e.g. 1400x896) or complex TLS certificate chains over HTTPS. Attempting to point `Device/PlayTFGif` to large internet GIFs causes memory allocation panics and reboots the device.
 > 
-> **Best Practice:** Client libraries should download remote GIF URLs on the host computer, decode and downscale each frame to 64x64, and stream raw 12,288-byte RGB frames using `Draw/SendHttpGif`. The `jixoo64` client and CLI implement this safe client-side pipeline by default.
+> **Best Practice:** Client implementations should download remote GIF URLs on the host machine, decode and downscale each frame to 64x64, and stream raw 12,288-byte RGB frames using `Draw/SendHttpGif`.
 
 ---
 
@@ -784,7 +784,7 @@ The Pixoo 64 can be discovered on a local area network using two primary methods
    Sending `Channel/SetIndex` cancels the active HTTP GIF buffer and wipes active native HTTP text layers. Furthermore, client libraries that automatically issue `Channel/SetIndex` when sending text will interrupt any currently playing HTTP background animation.
 
 3. **HTTP Local Graphics Alternative:**
-   Because firmware text overlays can interact unpredictably with active cloud channels, clients can render text locally onto a 64x64 bitmap in memory (e.g., via `java.awt.Graphics2D`) and send the resulting 12,288-byte RGB frame using `Draw/SendHttpGif`.
+   Because firmware text overlays can interact unpredictably with active cloud channels, clients can render text locally onto a 64x64 bitmap in memory using any 2D graphics engine and send the resulting 12,288-byte RGB frame using `Draw/SendHttpGif`.
 
 4. **Custom Channel vs HTTP Buffer (`Channel/SetIndex: 3`):**
    Calling `Channel/SetIndex: 3` switches the device to its internal **Divoom App Custom Gallery preset** stored in flash memory. If no custom gallery is configured via the Divoom mobile app, switching to index `3` results in a **black screen**. 
@@ -942,19 +942,13 @@ Unlike conventional image formats that store pixels in consecutive scanlines fro
   $$\text{Global } Y = (\lfloor\text{tileIndex} / 4\rfloor) \times 16 + \text{tile } y$$
   $$\text{Buffer Offset} = (\text{Global } Y \times 64 + \text{Global } X) \times 3$$
 
-`jixoo64` implements a pure Java 21 decoder (`DivoomAssetDecoder`) requiring zero external dependencies to unpack and untangle these binary assets directly into displayable RGB buffers.
+Client implementations can unpack and untangle these binary assets directly into standard 12,288-byte displayable RGB buffers using this coordinate mapping without requiring proprietary Divoom libraries.
 
-### 9.3. Pure Java Animated GIF89a Encoder (`GifEncoder`)
-To convert decoded Divoom assets or arbitrary `PixooAnimation` objects into universally compatible animated GIF files, `jixoo64` implements a standards-compliant GIF89a encoder:
-* **Zero Native/C Dependencies:** Fully implemented in standard Java without external LZO or native image libraries.
-* **Pure Java LZW Compression:** Implements variable-length code LZW stream compression (12-bit max code table, clear code and end-of-information code handling).
-* **Median-Cut Color Quantization:** Frames containing more than 256 colors are automatically quantized down to 256 indexed palette entries using a recursive median-cut partitioning algorithm.
-* **Per-Frame Timing & Netscape Looping:** Encodes exact per-frame millisecond delays into Graphic Control Extensions and includes the Netscape 2.0 application block for continuous looping.
+### 9.3. Display Geometry Mapping for Rectangular Media
+Because the physical Pixoo 64 display is strictly a $64 \times 64$ square matrix (1:1 aspect ratio), rectangular images and animations must be mapped onto the canvas before buffer transmission:
+* **Fit (Letterbox):** Scales the media by $\min(64 / W, 64 / H)$ to fit entirely within the canvas, padding remaining top/bottom or left/right borders with black pixels (`0, 0, 0`).
+* **Center-Crop:** Scales the media by $\max(64 / W, 64 / H)$ so that the shorter dimension fills 64 pixels, centering and cropping excess pixels along the longer dimension to fill the matrix without black bars.
+* **Stretch:** Resamples the media directly to $64 \times 64$ without preserving the source aspect ratio.
 
-### 9.4. Aspect Ratio Scaling Modes (`ScaleMode`)
-Because the Pixoo 64 physical display is strictly a $64 \times 64$ square matrix ($1:1$ aspect ratio), rectangular images and videos must be mapped onto the canvas:
-* `FIT_CENTER` (default): Scales the image by $\min(64 / W, 64 / H)$ to fit entirely within the canvas, padding empty borders with black pixels ($0, 0, 0$).
-* `FILL_CROP` (`--crop`): Scales the image by $\max(64 / W, 64 / H)$ so that the shorter dimension fills 64 pixels, centering the excess and cropping it away with zero letterbox bars.
-* `STRETCH`: Stretches the image directly to $64 \times 64$ without preserving the original aspect ratio.
 
 
