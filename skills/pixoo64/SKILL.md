@@ -1,6 +1,6 @@
 ---
 name: pixoo64
-description: Interact with Divoom Pixoo 64 devices to display images, videos, text, colors, change channels, run hardware tools (stopwatch, timer, scoreboard, noise meter, pomodoro, alarms, countdowns), sync time, query live weather, search and stream cloud pixel art, and configure device settings. Includes AI generation tools for Gemini.
+description: Interact with Divoom Pixoo 64 devices to display images, videos, text, colors, change channels, run hardware tools (stopwatch, timer, scoreboard, noise meter, pomodoro, alarms, countdowns), sync time, query live weather, search and stream cloud pixel art, and configure device settings. Includes AI generation tools for Gemini and physical LED matrix design guidelines.
 license: Apache-2.0
 compatibility: Requires pixoo-cli to be installed and available in the system PATH.
 ---
@@ -25,21 +25,39 @@ You can use the `pixoo-cli` tool to directly control the Pixoo 64 device. The CL
 - Trigger piezoelectric buzzer sound rhythms
 - Manage Divoom Cloud integration, persistent flash custom channel playlists, and gallery uploads
 
-
 When you need to execute a command, first ensure you know the device IP address, which the user can provide or which can be discovered using the `discover` subcommand if on the same local network.
 
-For full details on the available commands and how to use them, refer to the documentation:
+For full details on the available commands and how to use them, refer to:
 [pixoo-cli.md](references/pixoo-cli.md)
 
 *Tip: If you are unsure of the exact syntax for a command, you can always run `pixoo-cli --help` or `pixoo-cli <subcommand> --help` to see the built-in help.*
 
 ## 2. Generating Images and Videos with Gemini
 
-If the user requests to generate an image or video to display on the Pixoo 64, you can leverage Google's Gemini models.
-The Pixoo 64 requires a 1:1 aspect ratio (square), and animations must be carefully cropped, scaled, and converted to optimized GIFs.
+If the user requests to generate an image or video to display on the Pixoo 64, leverage Google's Gemini models:
+- **Images & Pixel Art Sprites**: Use Gemini Nano Banana 2 (`models/gemini-3.1-flash-image`) with strict pixel art prompts.
+- **Videos & Animations**: Use Gemini Omni (`models/gemini-omni-flash-preview`) cropped to 1:1 and downscaled to 64×64.
 
-For detailed instructions on generating content with Gemini Nano Banana (images) or Gemini Omni (video) and preparing it for the device, refer to the AI Generation guide:
+Always enforce authentic pixel art styling (no anti-aliasing blur, solid `#000000` black background, high color saturation).
+
+For step-by-step instructions and curl examples, see:
 [ai-generation.md](references/ai-generation.md)
+
+For prompt templates (sprite sheets, scenic loops, HUD widgets), see:
+[nano-banana-prompts.md](references/nano-banana-prompts.md)
+
+## 3. Physical LED Hardware Rules
+
+A 64×64 RGB LED matrix has distinct physical characteristics compared to computer monitors:
+- **True-Black (`#000000`)**: `#000000` powers off the physical LED. Aim for 25%–60% black background so unlit LEDs seamlessly blend into the physical bezel without light bleed.
+- **Diffuser Saturation**: Colors must be saturated (`HSV Saturation >= 0.60`) to punch through the matte diffuser.
+- **Hardware Frame Limit**: Custom HTTP GIF animations must stay between **4 and 28 frames** (maximum 32 frames) to fit within the ESP32 hardware memory buffer.
+- **Frame Rate**: Optimal pacing is **8 to 12 FPS** (delays of **80ms – 125ms**). Keep 60%–85% of background pixels static to prevent distracting whole-screen flicker.
+
+For deep optical laws and animation principles, see:
+- [pixoo64-led-bible.md](references/pixoo64-led-bible.md) — Physical optics, PWM duty cycles, and hardware limits.
+- [discovered-patterns.md](references/discovered-patterns.md) — Empirical archetypes, pacing, and design patterns.
+- [palettes.json](references/palettes.json) — Curated and extracted color palettes for LED matrices.
 
 ## Available Helper Scripts
 
