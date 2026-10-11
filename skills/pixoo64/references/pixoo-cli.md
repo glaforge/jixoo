@@ -294,11 +294,16 @@ pixoo-cli image --crop path/to/photo.jpg
 
 # Explicit scale mode (FIT_CENTER, FILL_CROP, STRETCH)
 pixoo-cli image -s FILL_CROP path/to/photo.jpg
+
+# Display pixel art with crisp nearest-neighbor sampling (no bilinear blurring)
+pixoo-cli image --nearest path/to/pixel_art.png
 ```
 
 Options:
 - `-c`, `--crop`: Crop rectangular images to fill 64x64 without letterbox bars (`FILL_CROP`).
 - `-s`, `--scale-mode=<mode>`: Scaling mode (`FIT_CENTER`, `FILL_CROP`, `STRETCH`).
+- `-n`, `--nearest`: Use nearest-neighbor (point) sampling instead of bilinear interpolation (preserves crisp pixel art).
+- `-m`, `--sampling-mode=<mode>`: Explicit sampling algorithm (`BILINEAR`, `NEAREST_NEIGHBOR`).
 
 ---
 
@@ -310,6 +315,9 @@ pixoo-cli gif --file path/to/animation.gif
 
 # Local GIF cropped to square
 pixoo-cli gif --crop --file path/to/animation.gif
+
+# Play pixel art GIF with crisp nearest-neighbor sampling
+pixoo-cli gif --nearest --file path/to/pixel_art.gif
 
 # Remote HTTP/HTTPS GIF URL (auto-downloaded, scaled client-side, and streamed safely)
 pixoo-cli gif --url "https://example.com/animation.gif"
@@ -324,6 +332,8 @@ pixoo-cli gif --direct --url "http://example.com/small.gif"
 Options:
 - `-c`, `--crop`: Crop rectangular GIFs to fill 64x64 without letterbox bars (`FILL_CROP`).
 - `-s`, `--scale-mode=<mode>`: Scaling mode (`FIT_CENTER`, `FILL_CROP`, `STRETCH`).
+- `-n`, `--nearest`: Use nearest-neighbor sampling instead of bilinear interpolation (preserves crisp pixel art).
+- `-m`, `--sampling-mode=<mode>`: Explicit sampling algorithm (`BILINEAR`, `NEAREST_NEIGHBOR`).
 - `--direct`: Direct device firmware to fetch URL directly via `Device/PlayTFGif` (bypasses client-side processing).
 
 

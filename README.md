@@ -215,8 +215,14 @@ pixoo-cli image path/to/artwork.png
 # Display image cropped to square (no black bars)
 pixoo-cli image --crop path/to/photo.jpg
 
+# Display pixel art with crisp nearest-neighbor sampling (no bilinear blurring)
+pixoo-cli image --nearest path/to/pixel_art.png
+
 # Display local animated GIF
 pixoo-cli gif --file path/to/animation.gif
+
+# Display pixel art GIF with nearest-neighbor sampling
+pixoo-cli gif --nearest --file path/to/pixel_art.gif
 
 # Stream remote HTTP/HTTPS GIF (auto-downloaded, scaled, and streamed client-side)
 pixoo-cli gif --url "http://example.com/animation.gif"

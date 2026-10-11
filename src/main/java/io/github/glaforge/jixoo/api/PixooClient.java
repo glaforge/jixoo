@@ -218,106 +218,166 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response
      */
     default PixooResponse sendImage(PixooImage image) {
-        return sendImage(image, ImageProcessor.ScaleMode.FIT_CENTER);
+        return sendImage(image, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
-     * Resizes and sends a static PixooImage to the display with the specified scaling mode.
+     * Resizes and sends a static PixooImage to the display with the specified scaling mode using bilinear interpolation.
      *
      * @param image     the image to process and send
      * @param scaleMode the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
      * @return the device's response
      */
     default PixooResponse sendImage(PixooImage image, ImageProcessor.ScaleMode scaleMode) {
-        return sendAnimation(ImageProcessor.processImage(image, scaleMode));
+        return sendImage(image, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
-     * Resizes and sends a static BufferedImage to the display using FIT_CENTER.
+     * Resizes and sends a static PixooImage to the display with the specified scaling and sampling mode.
+     *
+     * @param image        the image to process and send
+     * @param scaleMode    the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @return the device's response
+     */
+    default PixooResponse sendImage(PixooImage image, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
+        return sendAnimation(ImageProcessor.processImage(image, scaleMode, samplingMode));
+    }
+
+    /**
+     * Resizes and sends a static BufferedImage to the display using FIT_CENTER and bilinear interpolation.
      *
      * @param image the image to process and send
      * @return the device's response
      */
     default PixooResponse sendImage(BufferedImage image) {
-        return sendImage(PixooImage.fromBufferedImage(image), ImageProcessor.ScaleMode.FIT_CENTER);
+        return sendImage(PixooImage.fromBufferedImage(image), ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
-     * Resizes and sends a static BufferedImage to the display with the specified scaling mode.
+     * Resizes and sends a static BufferedImage to the display with the specified scaling mode using bilinear interpolation.
      *
      * @param image     the image to process and send
      * @param scaleMode the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
      * @return the device's response
      */
     default PixooResponse sendImage(BufferedImage image, ImageProcessor.ScaleMode scaleMode) {
-        return sendImage(PixooImage.fromBufferedImage(image), scaleMode);
+        return sendImage(PixooImage.fromBufferedImage(image), scaleMode, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
-     * Loads, resizes, and sends an image file from a Path to the display using FIT_CENTER.
+     * Resizes and sends a static BufferedImage to the display with the specified scaling and sampling mode.
+     *
+     * @param image        the image to process and send
+     * @param scaleMode    the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @return the device's response
+     */
+    default PixooResponse sendImage(BufferedImage image, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
+        return sendImage(PixooImage.fromBufferedImage(image), scaleMode, samplingMode);
+    }
+
+    /**
+     * Loads, resizes, and sends an image file from a Path to the display using FIT_CENTER and bilinear interpolation.
      *
      * @param path the path to the image file
      * @return the device's response
      */
     default PixooResponse sendImage(Path path) {
-        return sendImage(path, ImageProcessor.ScaleMode.FIT_CENTER);
+        return sendImage(path, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
-     * Loads, resizes, and sends an image file from a Path to the display with the specified scaling mode.
+     * Loads, resizes, and sends an image file from a Path to the display with the specified scaling mode using bilinear interpolation.
      *
      * @param path      the path to the image file
      * @param scaleMode the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
      * @return the device's response
      */
     default PixooResponse sendImage(Path path, ImageProcessor.ScaleMode scaleMode) {
-        return sendImage(ImageProcessor.loadImage(path), scaleMode);
+        return sendImage(path, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
-     * Decodes and displays an animated or static GIF from an InputStream using FIT_CENTER.
+     * Loads, resizes, and sends an image file from a Path to the display with the specified scaling and sampling mode.
+     *
+     * @param path         the path to the image file
+     * @param scaleMode    the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @return the device's response
+     */
+    default PixooResponse sendImage(Path path, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
+        return sendImage(ImageProcessor.loadImage(path), scaleMode, samplingMode);
+    }
+
+    /**
+     * Decodes and displays an animated or static GIF from an InputStream using FIT_CENTER and bilinear interpolation.
      *
      * @param gifStream the input stream containing the GIF data
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(InputStream gifStream) {
-        return sendGif(gifStream, ImageProcessor.ScaleMode.FIT_CENTER);
+        return sendGif(gifStream, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
-     * Decodes and displays an animated or static GIF from an InputStream with the specified scaling mode.
+     * Decodes and displays an animated or static GIF from an InputStream with the specified scaling mode using bilinear interpolation.
      *
      * @param gifStream the input stream containing the GIF data
      * @param scaleMode the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(InputStream gifStream, ImageProcessor.ScaleMode scaleMode) {
-        return sendAnimation(GifDecoder.decode(gifStream, scaleMode));
+        return sendGif(gifStream, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
-     * Decodes and displays an animated or static GIF from a Path using FIT_CENTER.
+     * Decodes and displays an animated or static GIF from an InputStream with the specified scaling and sampling mode.
+     *
+     * @param gifStream    the input stream containing the GIF data
+     * @param scaleMode    the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(InputStream gifStream, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
+        return sendAnimation(GifDecoder.decode(gifStream, scaleMode, samplingMode));
+    }
+
+    /**
+     * Decodes and displays an animated or static GIF from a Path using FIT_CENTER and bilinear interpolation.
      *
      * @param gifPath the path to the GIF file
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(Path gifPath) {
-        return sendGif(gifPath, ImageProcessor.ScaleMode.FIT_CENTER);
+        return sendGif(gifPath, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
-     * Decodes and displays an animated or static GIF from a Path with the specified scaling mode.
+     * Decodes and displays an animated or static GIF from a Path with the specified scaling mode using bilinear interpolation.
      *
      * @param gifPath   the path to the GIF file
      * @param scaleMode the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(Path gifPath, ImageProcessor.ScaleMode scaleMode) {
-        return sendAnimation(GifDecoder.decode(gifPath, scaleMode));
+        return sendGif(gifPath, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
-     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URI using FIT_CENTER.
+     * Decodes and displays an animated or static GIF from a Path with the specified scaling and sampling mode.
+     *
+     * @param gifPath      the path to the GIF file
+     * @param scaleMode    the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(Path gifPath, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
+        return sendAnimation(GifDecoder.decode(gifPath, scaleMode, samplingMode));
+    }
+
+    /**
+     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URI using FIT_CENTER and bilinear interpolation.
      * The GIF is downloaded and scaled on the host machine before streaming to the device,
      * avoiding firmware crashes, out-of-memory errors, and TLS incompatibilities on the ESP32 microcontroller.
      *
@@ -325,11 +385,11 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(URI gifUri) {
-        return sendGif(gifUri, ImageProcessor.ScaleMode.FIT_CENTER);
+        return sendGif(gifUri, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
-     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URI with the specified scaling mode.
+     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URI with the specified scaling mode and bilinear interpolation.
      * The GIF is downloaded and scaled on the host machine before streaming to the device,
      * avoiding firmware crashes, out-of-memory errors, and TLS incompatibilities on the ESP32 microcontroller.
      *
@@ -338,6 +398,18 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(URI gifUri, ImageProcessor.ScaleMode scaleMode) {
+        return sendGif(gifUri, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
+    }
+
+    /**
+     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URI with the specified scaling and sampling mode.
+     *
+     * @param gifUri       the HTTP/HTTPS URI of the GIF
+     * @param scaleMode    the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(URI gifUri, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
         try {
             HttpClient httpClient = HttpClient.newBuilder()
                     .followRedirects(HttpClient.Redirect.NORMAL)
@@ -354,7 +426,7 @@ public interface PixooClient extends AutoCloseable {
                 throw new io.github.glaforge.jixoo.api.exception.PixooException(
                         "Failed to download GIF from " + gifUri + ": HTTP " + resp.statusCode());
             }
-            return sendGif(new ByteArrayInputStream(resp.body()), scaleMode);
+            return sendGif(new ByteArrayInputStream(resp.body()), scaleMode, samplingMode);
         } catch (io.github.glaforge.jixoo.api.exception.PixooException e) {
             throw e;
         } catch (Exception e) {
@@ -370,7 +442,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGifUrl(String gifUrl) {
-        return sendGifUrl(gifUrl, ImageProcessor.ScaleMode.FIT_CENTER);
+        return sendGifUrl(gifUrl, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
@@ -381,7 +453,19 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGifUrl(String gifUrl, ImageProcessor.ScaleMode scaleMode) {
-        return sendGif(URI.create(gifUrl), scaleMode);
+        return sendGifUrl(gifUrl, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
+    }
+
+    /**
+     * Downloads, decodes, scales, and displays an animated or static GIF from a remote HTTP or HTTPS URL string with the specified scaling and sampling mode.
+     *
+     * @param gifUrl       the HTTP/HTTPS URL string of the GIF
+     * @param scaleMode    the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGifUrl(String gifUrl, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
+        return sendGif(URI.create(gifUrl), scaleMode, samplingMode);
     }
 
     /**

@@ -49,7 +49,7 @@ public final class GifDecoder {
 
     /**
      * Decodes a GIF file or stream into a {@link PixooAnimation} with exact per-frame delays
-     * and specified scaling mode (e.g. FILL_CROP to crop to square without black bars).
+     * and specified scaling mode (e.g. FILL_CROP to crop to square without black bars) using bilinear interpolation.
      *
      * @param inputStream the stream containing the GIF data
      * @param scaleMode   the scaling mode (FIT_CENTER, FILL_CROP, STRETCH)
@@ -57,9 +57,23 @@ public final class GifDecoder {
      * @throws PixooException if decoding fails
      */
     public static PixooAnimation decode(InputStream inputStream, ImageProcessor.ScaleMode scaleMode) {
+        return decode(inputStream, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
+    }
+
+    /**
+     * Decodes a GIF file or stream into a {@link PixooAnimation} with exact per-frame delays,
+     * specified scaling mode, and sampling mode.
+     *
+     * @param inputStream  the stream containing the GIF data
+     * @param scaleMode    the scaling mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @return a PixooAnimation containing the GIF frames
+     * @throws PixooException if decoding fails
+     */
+    public static PixooAnimation decode(InputStream inputStream, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
         try {
             byte[] bytes = inputStream.readAllBytes();
-            return decode(bytes, scaleMode);
+            return decode(bytes, scaleMode, samplingMode);
         } catch (PixooException e) {
             throw e;
         } catch (Exception e) {
@@ -69,19 +83,19 @@ public final class GifDecoder {
 
     /**
      * Decodes a GIF file from the specified path into a {@link PixooAnimation}
-     * using {@link ImageProcessor.ScaleMode#FIT_CENTER}.
+     * using {@link ImageProcessor.ScaleMode#FIT_CENTER} and bilinear interpolation.
      *
      * @param path the path to the GIF file
      * @return a PixooAnimation containing the GIF frames
      * @throws PixooException if reading or decoding fails
      */
     public static PixooAnimation decode(Path path) {
-        return decode(path, ImageProcessor.ScaleMode.FIT_CENTER);
+        return decode(path, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
      * Decodes a GIF file from the specified path into a {@link PixooAnimation}
-     * with specified scaling mode.
+     * with specified scaling mode and bilinear interpolation.
      *
      * @param path      the path to the GIF file
      * @param scaleMode the scaling mode (FIT_CENTER, FILL_CROP, STRETCH)
@@ -89,8 +103,22 @@ public final class GifDecoder {
      * @throws PixooException if reading or decoding fails
      */
     public static PixooAnimation decode(Path path, ImageProcessor.ScaleMode scaleMode) {
+        return decode(path, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
+    }
+
+    /**
+     * Decodes a GIF file from the specified path into a {@link PixooAnimation}
+     * with specified scaling mode and sampling mode.
+     *
+     * @param path         the path to the GIF file
+     * @param scaleMode    the scaling mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @return a PixooAnimation containing the GIF frames
+     * @throws PixooException if reading or decoding fails
+     */
+    public static PixooAnimation decode(Path path, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
         try (InputStream is = Files.newInputStream(path)) {
-            return decode(is, scaleMode);
+            return decode(is, scaleMode, samplingMode);
         } catch (PixooException e) {
             throw e;
         } catch (Exception e) {
@@ -99,17 +127,25 @@ public final class GifDecoder {
     }
 
     /**
-     * Decodes GIF bytes directly into a PixooAnimation using {@link ImageProcessor.ScaleMode#FIT_CENTER}.
+     * Decodes GIF bytes directly into a PixooAnimation using {@link ImageProcessor.ScaleMode#FIT_CENTER} and bilinear interpolation.
      */
     public static PixooAnimation decode(byte[] data) {
-        return decode(data, ImageProcessor.ScaleMode.FIT_CENTER);
+        return decode(data, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
     }
 
     /**
-     * Decodes GIF bytes directly into a PixooAnimation with specified scaling mode.
+     * Decodes GIF bytes directly into a PixooAnimation with specified scaling mode and bilinear interpolation.
      */
     public static PixooAnimation decode(byte[] data, ImageProcessor.ScaleMode scaleMode) {
+        return decode(data, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
+    }
+
+    /**
+     * Decodes GIF bytes directly into a PixooAnimation with specified scaling mode and sampling mode.
+     */
+    public static PixooAnimation decode(byte[] data, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
         ImageProcessor.ScaleMode mode = scaleMode != null ? scaleMode : ImageProcessor.ScaleMode.FIT_CENTER;
+        ImageProcessor.SamplingMode sampleMode = samplingMode != null ? samplingMode : ImageProcessor.SamplingMode.BILINEAR;
         if (data == null || data.length < 13) {
             throw new PixooException("Invalid GIF: Data stream too short");
         }
@@ -246,7 +282,7 @@ public final class GifDecoder {
 
                 // Resize current canvas to 64x64 PixooImage
                 PixooImage rawImg = new PixooImage(canvasWidth, canvasHeight, currentCanvas);
-                PixooImage fitted = rawImg.resizeAndFit(64, 64, mode);
+                PixooImage fitted = rawImg.resizeAndFit(64, 64, mode, sampleMode);
                 frames.add(new PixooFrame(fitted.toRawRgb(), delayMs));
 
                 // Update master canvas for next frame according to disposal method

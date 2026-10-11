@@ -72,6 +72,18 @@ public class GifCommand implements Callable<Integer> {
     private io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode scaleMode;
 
     @Option(
+            names = {"-n", "--nearest"},
+            description = "Use nearest-neighbor sampling instead of bilinear interpolation (ideal for pixel art)"
+    )
+    private boolean nearest;
+
+    @Option(
+            names = {"-m", "--sampling-mode"},
+            description = "Sampling mode for scaling: BILINEAR (default), NEAREST_NEIGHBOR"
+    )
+    private io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode samplingMode;
+
+    @Option(
             names = {"--direct"},
             description = "Direct device firmware to fetch URL directly via Device/PlayTFGif (WARNING: can crash device on high-res GIFs or complex HTTPS)"
     )
@@ -94,6 +106,11 @@ public class GifCommand implements Callable<Integer> {
                 : (crop ? io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode.FILL_CROP
                         : io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode.FIT_CENTER);
 
+        io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode sampleMode = samplingMode != null
+                ? samplingMode
+                : (nearest ? io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode.NEAREST_NEIGHBOR
+                           : io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode.BILINEAR);
+
         PixooClient client = parent.createClient();
         PixooResponse response;
 
@@ -103,16 +120,16 @@ public class GifCommand implements Callable<Integer> {
                 spec.commandLine().getErr().printf("GIF file does not exist or is not a regular file: %s%n", gifFilePath);
                 return 1;
             }
-            spec.commandLine().getOut().printf("Decoding and uploading GIF file: %s (%s)...%n", path.getFileName(), mode);
-            response = client.sendGif(path, mode);
+            spec.commandLine().getOut().printf("Decoding and uploading GIF file: %s (%s, %s)...%n", path.getFileName(), mode, sampleMode);
+            response = client.sendGif(path, mode, sampleMode);
         } else {
             if (direct) {
                 spec.commandLine().getOut().printf("Directing Pixoo 64 firmware to download and render remote GIF from URL: %s...%n", gifUrl);
                 response = client.sendRemoteGifUrl(gifUrl);
             } else {
-                spec.commandLine().getOut().printf("Downloading, scaling to 64x64 (%s), and streaming remote GIF from URL: %s...%n", mode, gifUrl);
+                spec.commandLine().getOut().printf("Downloading, scaling to 64x64 (%s, %s), and streaming remote GIF from URL: %s...%n", mode, sampleMode, gifUrl);
                 try {
-                    response = client.sendGifUrl(gifUrl, mode);
+                    response = client.sendGifUrl(gifUrl, mode, sampleMode);
                 } catch (Exception e) {
                     spec.commandLine().getErr().printf("Failed to download or stream GIF: %s%n", e.getMessage());
                     return 1;

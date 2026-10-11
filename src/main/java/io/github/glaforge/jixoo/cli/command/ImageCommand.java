@@ -60,6 +60,18 @@ public class ImageCommand implements Callable<Integer> {
     )
     private io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode scaleMode;
 
+    @Option(
+            names = {"-n", "--nearest"},
+            description = "Use nearest-neighbor sampling instead of bilinear interpolation (ideal for pixel art)"
+    )
+    private boolean nearest;
+
+    @Option(
+            names = {"-m", "--sampling-mode"},
+            description = "Sampling mode for scaling: BILINEAR (default), NEAREST_NEIGHBOR"
+    )
+    private io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode samplingMode;
+
     @Parameters(
             index = "0",
             description = "Path to the image file (e.g., image.png, photo.jpg)"
@@ -79,9 +91,14 @@ public class ImageCommand implements Callable<Integer> {
                 : (crop ? io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode.FILL_CROP
                         : io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode.FIT_CENTER);
 
+        io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode sampleMode = samplingMode != null
+                ? samplingMode
+                : (nearest ? io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode.NEAREST_NEIGHBOR
+                           : io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode.BILINEAR);
+
         PixooClient client = parent.createClient();
-        spec.commandLine().getOut().printf("Processing and sending image: %s (%s)...%n", path.getFileName(), mode);
-        PixooResponse response = client.sendImage(path, mode);
+        spec.commandLine().getOut().printf("Processing and sending image: %s (%s, %s)...%n", path.getFileName(), mode, sampleMode);
+        PixooResponse response = client.sendImage(path, mode, sampleMode);
         if (response.isSuccess()) {
             spec.commandLine().getOut().printf("Successfully displayed image: %s.%n", path.getFileName());
             return 0;

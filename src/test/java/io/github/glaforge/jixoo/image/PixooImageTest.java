@@ -146,4 +146,45 @@ class PixooImageTest {
         assertEquals(20, convertedBack.getHeight());
         assertEquals(0xFF112233, convertedBack.getRGB(5, 5));
     }
+
+    @Test
+    void testNearestNeighborVsBilinearSampling() {
+        // Create 2x2 image with 4 distinct pure colors
+        int[] pixels = new int[4];
+        pixels[0] = 0xFFFF0000; // Red (top-left)
+        pixels[1] = 0xFF00FF00; // Green (top-right)
+        pixels[2] = 0xFF0000FF; // Blue (bottom-left)
+        pixels[3] = 0xFFFFFF00; // Yellow (bottom-right)
+
+        PixooImage tiny = new PixooImage(2, 2, pixels);
+
+        // Scale up to 64x64 using NEAREST_NEIGHBOR
+        PixooImage nearestScaled = tiny.resizeAndFit(64, 64, ImageProcessor.ScaleMode.STRETCH, ImageProcessor.SamplingMode.NEAREST_NEIGHBOR);
+        assertEquals(64, nearestScaled.width());
+        assertEquals(64, nearestScaled.height());
+
+        // In nearest-neighbor, every pixel MUST be one of the original 4 colors, with zero intermediate blends
+        for (int y = 0; y < 64; y++) {
+            for (int x = 0; x < 64; x++) {
+                int p = nearestScaled.getPixel(x, y);
+                assertTrue(
+                        p == 0xFFFF0000 || p == 0xFF00FF00 || p == 0xFF0000FF || p == 0xFFFFFF00,
+                        "Nearest-neighbor must preserve pure original colors without blending, but got: " + Integer.toHexString(p)
+                );
+            }
+        }
+
+        // Verify top-left quadrant is pure red, top-right is pure green
+        assertEquals(0xFFFF0000, nearestScaled.getPixel(10, 10));
+        assertEquals(0xFF00FF00, nearestScaled.getPixel(50, 10));
+        assertEquals(0xFF0000FF, nearestScaled.getPixel(10, 50));
+        assertEquals(0xFFFFFF00, nearestScaled.getPixel(50, 50));
+
+        // Scale up to 64x64 using BILINEAR
+        PixooImage bilinearScaled = tiny.resizeAndFit(64, 64, ImageProcessor.ScaleMode.STRETCH, ImageProcessor.SamplingMode.BILINEAR);
+        // The midpoint between Red and Green should be an interpolated blended color
+        int blendPixel = bilinearScaled.getPixel(32, 10);
+        assertNotEquals(0xFFFF0000, blendPixel);
+        assertNotEquals(0xFF00FF00, blendPixel);
+    }
 }

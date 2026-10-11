@@ -134,17 +134,32 @@ public record PixooImage(int width, int height, int[] argbPixels) {
      * @return a new resized PixooImage of size targetWidth x targetHeight
      */
     public PixooImage resizeAndFit(int targetWidth, int targetHeight, ImageProcessor.ScaleMode mode) {
+        return resizeAndFit(targetWidth, targetHeight, mode, ImageProcessor.SamplingMode.BILINEAR);
+    }
+
+    /**
+     * Resizes and fits this image into the specified target dimensions using the specified sampling mode.
+     *
+     * @param targetWidth  Target width (e.g. 64)
+     * @param targetHeight Target height (e.g. 64)
+     * @param mode         Scaling and aspect-ratio strategy
+     * @param samplingMode Sampling and interpolation algorithm (BILINEAR or NEAREST_NEIGHBOR)
+     * @return a new resized PixooImage of size targetWidth x targetHeight
+     */
+    public PixooImage resizeAndFit(int targetWidth, int targetHeight, ImageProcessor.ScaleMode mode, ImageProcessor.SamplingMode samplingMode) {
         if (targetWidth <= 0 || targetHeight <= 0) {
             throw new IllegalArgumentException("Target dimensions must be positive");
         }
         if (mode == null) {
             mode = ImageProcessor.ScaleMode.FIT_CENTER;
         }
+        if (samplingMode == null) {
+            samplingMode = ImageProcessor.SamplingMode.BILINEAR;
+        }
 
         if (this.width == targetWidth && this.height == targetHeight) {
             return this;
         }
-
 
         int scaledW;
         int scaledH;
@@ -190,65 +205,74 @@ public record PixooImage(int width, int height, int[] argbPixels) {
                     continue; // Leave background black for letterbox
                 }
 
-                // Map to source floating-point coordinate
-                double sx = ((lx + 0.5) * this.width) / scaledW - 0.5;
-                double sy = ((ly + 0.5) * this.height) / scaledH - 0.5;
+                if (samplingMode == ImageProcessor.SamplingMode.NEAREST_NEIGHBOR) {
+                    // Nearest-Neighbor / Point sampling (crisp pixel art without blurring)
+                    int srcX = (int) Math.floor(((lx + 0.5) * this.width) / scaledW);
+                    int srcY = (int) Math.floor(((ly + 0.5) * this.height) / scaledH);
+                    srcX = Math.min(Math.max(0, srcX), this.width - 1);
+                    srcY = Math.min(Math.max(0, srcY), this.height - 1);
+                    destPixels[dy * targetWidth + dx] = this.argbPixels[srcY * this.width + srcX];
+                } else {
+                    // Bilinear interpolation
+                    double sx = ((lx + 0.5) * this.width) / scaledW - 0.5;
+                    double sy = ((ly + 0.5) * this.height) / scaledH - 0.5;
 
-                // Clamp to source boundaries
-                if (sx < 0) sx = 0;
-                if (sy < 0) sy = 0;
-                if (sx > this.width - 1) sx = this.width - 1;
-                if (sy > this.height - 1) sy = this.height - 1;
+                    // Clamp to source boundaries
+                    if (sx < 0) sx = 0;
+                    if (sy < 0) sy = 0;
+                    if (sx > this.width - 1) sx = this.width - 1;
+                    if (sy > this.height - 1) sy = this.height - 1;
 
-                int x0 = (int) Math.floor(sx);
-                int y0 = (int) Math.floor(sy);
-                int x1 = Math.min(x0 + 1, this.width - 1);
-                int y1 = Math.min(y0 + 1, this.height - 1);
+                    int x0 = (int) Math.floor(sx);
+                    int y0 = (int) Math.floor(sy);
+                    int x1 = Math.min(x0 + 1, this.width - 1);
+                    int y1 = Math.min(y0 + 1, this.height - 1);
 
-                double fx = sx - x0;
-                double fy = sy - y0;
+                    double fx = sx - x0;
+                    double fy = sy - y0;
 
-                double w00 = (1.0 - fx) * (1.0 - fy);
-                double w10 = fx * (1.0 - fy);
-                double w01 = (1.0 - fx) * fy;
-                double w11 = fx * fy;
+                    double w00 = (1.0 - fx) * (1.0 - fy);
+                    double w10 = fx * (1.0 - fy);
+                    double w01 = (1.0 - fx) * fy;
+                    double w11 = fx * fy;
 
-                int p00 = this.argbPixels[y0 * this.width + x0];
-                int p10 = this.argbPixels[y0 * this.width + x1];
-                int p01 = this.argbPixels[y1 * this.width + x0];
-                int p11 = this.argbPixels[y1 * this.width + x1];
+                    int p00 = this.argbPixels[y0 * this.width + x0];
+                    int p10 = this.argbPixels[y0 * this.width + x1];
+                    int p01 = this.argbPixels[y1 * this.width + x0];
+                    int p11 = this.argbPixels[y1 * this.width + x1];
 
-                int a = (int) Math.round(
-                        w00 * ((p00 >> 24) & 0xFF) +
-                        w10 * ((p10 >> 24) & 0xFF) +
-                        w01 * ((p01 >> 24) & 0xFF) +
-                        w11 * ((p11 >> 24) & 0xFF)
-                );
-                int r = (int) Math.round(
-                        w00 * ((p00 >> 16) & 0xFF) +
-                        w10 * ((p10 >> 16) & 0xFF) +
-                        w01 * ((p01 >> 16) & 0xFF) +
-                        w11 * ((p11 >> 16) & 0xFF)
-                );
-                int g = (int) Math.round(
-                        w00 * ((p00 >> 8) & 0xFF) +
-                        w10 * ((p10 >> 8) & 0xFF) +
-                        w01 * ((p01 >> 8) & 0xFF) +
-                        w11 * ((p11 >> 8) & 0xFF)
-                );
-                int b = (int) Math.round(
-                        w00 * (p00 & 0xFF) +
-                        w10 * (p10 & 0xFF) +
-                        w01 * (p01 & 0xFF) +
-                        w11 * (p11 & 0xFF)
-                );
+                    int a = (int) Math.round(
+                            w00 * ((p00 >> 24) & 0xFF) +
+                            w10 * ((p10 >> 24) & 0xFF) +
+                            w01 * ((p01 >> 24) & 0xFF) +
+                            w11 * ((p11 >> 24) & 0xFF)
+                    );
+                    int r = (int) Math.round(
+                            w00 * ((p00 >> 16) & 0xFF) +
+                            w10 * ((p10 >> 16) & 0xFF) +
+                            w01 * ((p01 >> 16) & 0xFF) +
+                            w11 * ((p11 >> 16) & 0xFF)
+                    );
+                    int g = (int) Math.round(
+                            w00 * ((p00 >> 8) & 0xFF) +
+                            w10 * ((p10 >> 8) & 0xFF) +
+                            w01 * ((p01 >> 8) & 0xFF) +
+                            w11 * ((p11 >> 8) & 0xFF)
+                    );
+                    int b = (int) Math.round(
+                            w00 * (p00 & 0xFF) +
+                            w10 * (p10 & 0xFF) +
+                            w01 * (p01 & 0xFF) +
+                            w11 * (p11 & 0xFF)
+                    );
 
-                a = Math.min(255, Math.max(0, a));
-                r = Math.min(255, Math.max(0, r));
-                g = Math.min(255, Math.max(0, g));
-                b = Math.min(255, Math.max(0, b));
+                    a = Math.min(255, Math.max(0, a));
+                    r = Math.min(255, Math.max(0, r));
+                    g = Math.min(255, Math.max(0, g));
+                    b = Math.min(255, Math.max(0, b));
 
-                destPixels[dy * targetWidth + dx] = (a << 24) | (r << 16) | (g << 8) | b;
+                    destPixels[dy * targetWidth + dx] = (a << 24) | (r << 16) | (g << 8) | b;
+                }
             }
         }
 

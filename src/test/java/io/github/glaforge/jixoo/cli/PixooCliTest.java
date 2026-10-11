@@ -146,6 +146,44 @@ class PixooCliTest {
     }
 
     @Test
+    @DisplayName("Image subcommand should parse --nearest and --sampling-mode options")
+    void testImageNearestOptionsParsing() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter err = new StringWriter();
+        cmd.setErr(new PrintWriter(err));
+
+        int exitCode = cmd.execute("--host", "192.168.1.100", "image", "--nearest", "/non/existent/path/photo.png");
+        assertEquals(1, exitCode);
+        assertTrue(err.toString().contains("does not exist"));
+
+        err.getBuffer().setLength(0);
+        exitCode = cmd.execute("--host", "192.168.1.100", "image", "--sampling-mode", "NEAREST_NEIGHBOR", "/non/existent/path/photo.png");
+        assertEquals(1, exitCode);
+        assertTrue(err.toString().contains("does not exist"));
+    }
+
+    @Test
+    @DisplayName("Gif subcommand should parse --nearest and --sampling-mode options")
+    void testGifNearestOptionsParsing() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter err = new StringWriter();
+        cmd.setErr(new PrintWriter(err));
+
+        int exitCode = cmd.execute("--host", "192.168.1.100", "gif", "--nearest", "-f", "/non/existent/path/anim.gif");
+        assertEquals(1, exitCode);
+        assertTrue(err.toString().contains("does not exist"));
+
+        err.getBuffer().setLength(0);
+        exitCode = cmd.execute("--host", "192.168.1.100", "gif", "--sampling-mode", "NEAREST_NEIGHBOR", "-f", "/non/existent/path/anim.gif");
+        assertEquals(1, exitCode);
+        assertTrue(err.toString().contains("does not exist"));
+    }
+
+    @Test
     @DisplayName("Gif subcommand should fail if neither --file nor --url is provided")
     void testGifMissingParams() {
         PixooCli cli = new PixooCli();

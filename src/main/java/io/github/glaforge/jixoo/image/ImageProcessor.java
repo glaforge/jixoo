@@ -40,6 +40,20 @@ public class ImageProcessor {
     }
 
     /**
+     * Sampling mode for image resizing and interpolation.
+     */
+    public enum SamplingMode {
+        /**
+         * Bilinear interpolation for smooth color transitions (default).
+         */
+        BILINEAR,
+        /**
+         * Nearest-neighbor (point) sampling preserving crisp pixel art edges without blurring.
+         */
+        NEAREST_NEIGHBOR
+    }
+
+    /**
      * Loads an image from the specified path into a {@link PixooImage}.
      * Supports PNG, GIF, and BMP natively with pure-Java decoders.
      *
@@ -148,24 +162,38 @@ public class ImageProcessor {
     }
 
     /**
-     * Resizes and fits a PixooImage into a 64x64 canvas using the specified scale mode.
+     * Resizes and fits a PixooImage into a 64x64 canvas using the specified scale mode with bilinear interpolation.
      */
     public static PixooImage resizeAndFit(PixooImage input, ScaleMode scaleMode) {
-        return input.resizeAndFit(64, 64, scaleMode);
+        return input.resizeAndFit(64, 64, scaleMode, SamplingMode.BILINEAR);
+    }
+
+    /**
+     * Resizes and fits a PixooImage into a 64x64 canvas using the specified scale mode and sampling mode.
+     */
+    public static PixooImage resizeAndFit(PixooImage input, ScaleMode scaleMode, SamplingMode samplingMode) {
+        return input.resizeAndFit(64, 64, scaleMode, samplingMode);
     }
 
     /**
      * Processes a PixooImage and wraps it in a single-frame PixooAnimation.
      */
     public static PixooAnimation processImage(PixooImage input) {
-        return processImage(input, ScaleMode.FIT_CENTER);
+        return processImage(input, ScaleMode.FIT_CENTER, SamplingMode.BILINEAR);
     }
 
     /**
      * Processes a PixooImage with the specified scale mode and wraps it in a single-frame PixooAnimation.
      */
     public static PixooAnimation processImage(PixooImage input, ScaleMode scaleMode) {
-        PixooImage processed = resizeAndFit(input, scaleMode);
+        return processImage(input, scaleMode, SamplingMode.BILINEAR);
+    }
+
+    /**
+     * Processes a PixooImage with the specified scale mode and sampling mode and wraps it in a single-frame PixooAnimation.
+     */
+    public static PixooAnimation processImage(PixooImage input, ScaleMode scaleMode, SamplingMode samplingMode) {
+        PixooImage processed = resizeAndFit(input, scaleMode, samplingMode);
         return PixooAnimation.singleImage(processed);
     }
 
@@ -186,24 +214,38 @@ public class ImageProcessor {
     }
 
     /**
-     * Resizes and fits a BufferedImage using FIT_CENTER.
+     * Resizes and fits a BufferedImage using FIT_CENTER with bilinear interpolation.
      */
     public static BufferedImage resizeAndFit(BufferedImage input) {
-        return resizeAndFit(input, ScaleMode.FIT_CENTER);
+        return resizeAndFit(input, ScaleMode.FIT_CENTER, SamplingMode.BILINEAR);
     }
 
     /**
-     * Resizes and fits a BufferedImage using the specified scale mode with pure-Java interpolation.
+     * Resizes and fits a BufferedImage using the specified scale mode with bilinear interpolation.
      */
     public static BufferedImage resizeAndFit(BufferedImage input, ScaleMode scaleMode) {
-        PixooImage pix = PixooImage.fromBufferedImage(input);
-        return pix.resizeAndFit(64, 64, scaleMode).toBufferedImage();
+        return resizeAndFit(input, scaleMode, SamplingMode.BILINEAR);
     }
 
     /**
-     * Processes a BufferedImage into a single-frame PixooAnimation.
+     * Resizes and fits a BufferedImage using the specified scale mode and sampling mode.
+     */
+    public static BufferedImage resizeAndFit(BufferedImage input, ScaleMode scaleMode, SamplingMode samplingMode) {
+        PixooImage pix = PixooImage.fromBufferedImage(input);
+        return pix.resizeAndFit(64, 64, scaleMode, samplingMode).toBufferedImage();
+    }
+
+    /**
+     * Processes a BufferedImage into a single-frame PixooAnimation with FIT_CENTER and bilinear interpolation.
      */
     public static PixooAnimation processImage(BufferedImage input) {
-        return processImage(PixooImage.fromBufferedImage(input));
+        return processImage(PixooImage.fromBufferedImage(input), ScaleMode.FIT_CENTER, SamplingMode.BILINEAR);
+    }
+
+    /**
+     * Processes a BufferedImage into a single-frame PixooAnimation with the specified scale mode and sampling mode.
+     */
+    public static PixooAnimation processImage(BufferedImage input, ScaleMode scaleMode, SamplingMode samplingMode) {
+        return processImage(PixooImage.fromBufferedImage(input), scaleMode, samplingMode);
     }
 }
