@@ -184,7 +184,7 @@ class PixooCliTest {
     }
 
     @Test
-    @DisplayName("Image subcommand should parse --led-optimize and --black-threshold options")
+    @DisplayName("Image subcommand should parse --led-optimize, --black-threshold, and combined --nearest options")
     void testImageLedOptimizeOptionsParsing() {
         PixooCli cli = new PixooCli();
         CommandLine cmd = new CommandLine(cli);
@@ -192,13 +192,13 @@ class PixooCliTest {
         StringWriter err = new StringWriter();
         cmd.setErr(new PrintWriter(err));
 
-        int exitCode = cmd.execute("--host", "192.168.1.100", "image", "--led-optimize", "--black-threshold", "20", "/non/existent/path/photo.png");
+        int exitCode = cmd.execute("--host", "192.168.1.100", "image", "--nearest", "--led-optimize", "--black-threshold", "20", "/non/existent/path/photo.png");
         assertEquals(1, exitCode);
         assertTrue(err.toString().contains("does not exist"));
     }
 
     @Test
-    @DisplayName("Gif subcommand should parse --led-optimize and --black-threshold options")
+    @DisplayName("Gif subcommand should parse --led-optimize, --black-threshold, and combined --nearest options")
     void testGifLedOptimizeOptionsParsing() {
         PixooCli cli = new PixooCli();
         CommandLine cmd = new CommandLine(cli);
@@ -206,7 +206,7 @@ class PixooCliTest {
         StringWriter err = new StringWriter();
         cmd.setErr(new PrintWriter(err));
 
-        int exitCode = cmd.execute("--host", "192.168.1.100", "gif", "--led-optimize", "--black-threshold", "20", "-f", "/non/existent/path/anim.gif");
+        int exitCode = cmd.execute("--host", "192.168.1.100", "gif", "--nearest", "--led-optimize", "--black-threshold", "20", "-f", "/non/existent/path/anim.gif");
         assertEquals(1, exitCode);
         assertTrue(err.toString().contains("does not exist"));
     }

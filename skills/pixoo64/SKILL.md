@@ -50,7 +50,7 @@ For prompt templates (sprite sheets, scenic loops, HUD widgets), see:
 
 A 64×64 RGB LED matrix has distinct physical characteristics compared to computer monitors:
 - **True-Black (`#000000`)**: `#000000` powers off the physical LED. Aim for 25%–60% black background so unlit LEDs seamlessly blend into the physical bezel without light bleed.
-- **Diffuser Saturation**: Colors must be saturated (`HSV Saturation >= 0.60`) to punch through the matte diffuser.
+- **Diffuser Saturation**: Colors must be saturated (`HSV Saturation >= 0.65`) to punch through the matte diffuser.
 - **Hardware Frame Limit**: Custom HTTP GIF animations must stay between **4 and 28 frames** (maximum 32 frames) to fit within the ESP32 hardware memory buffer.
 - **Frame Rate**: Optimal pacing is **8 to 12 FPS** (delays of **80ms – 125ms**). Keep 60%–85% of background pixels static to prevent distracting whole-screen flicker.
 

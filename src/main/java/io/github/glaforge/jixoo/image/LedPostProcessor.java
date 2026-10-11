@@ -18,7 +18,6 @@ package io.github.glaforge.jixoo.image;
 import io.github.glaforge.jixoo.model.PixooAnimation;
 import io.github.glaforge.jixoo.model.PixooFrame;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,7 +52,7 @@ public record LedPostProcessor(int blackThreshold, int maxLuminance, double satu
         if (maxLuminance < 1 || maxLuminance > 255) {
             throw new IllegalArgumentException("maxLuminance must be between 1 and 255: " + maxLuminance);
         }
-        if (saturationBoost < 0.1 || saturationBoost > 3.0) {
+        if (Double.isNaN(saturationBoost) || saturationBoost < 0.1 || saturationBoost > 3.0) {
             throw new IllegalArgumentException("saturationBoost must be between 0.1 and 3.0: " + saturationBoost);
         }
     }
@@ -164,20 +163,32 @@ public record LedPostProcessor(int blackThreshold, int maxLuminance, double satu
         int g = (argb >> 8) & 0xFF;
         int b = argb & 0xFF;
 
-        // 1. True-Black Clamping (powers LED completely off)
-        if (r <= blackThreshold && g <= blackThreshold && b <= blackThreshold) {
-            return (a << 24); // pure black with original alpha
+        // Composite semi-transparent pixels over black before thresholding so low-alpha highlights
+        // whose effective LED brightness falls below blackThreshold are clamped to #000000.
+        if (a < 255) {
+            r = (r * a) / 255;
+            g = (g * a) / 255;
+            b = (b * a) / 255;
+            a = 255;
         }
 
-        // 2. Saturation Boost (optional)
+        // 1. True-Black Clamping (powers LED completely off)
+        if (r <= blackThreshold && g <= blackThreshold && b <= blackThreshold) {
+            return (a << 24);
+        }
+
+        // 2. Saturation Boost (pure-Java HSV saturation scaling without java.awt.Color or heap allocation)
         if (saturationBoost != 1.0) {
-            float[] hsv = new float[3];
-            Color.RGBtoHSB(r, g, b, hsv);
-            hsv[1] = (float) Math.min(1.0, hsv[1] * saturationBoost);
-            int rgb = Color.HSBtoRGB(hsv[0], hsv[1], hsv[2]);
-            r = (rgb >> 16) & 0xFF;
-            g = (rgb >> 8) & 0xFF;
-            b = rgb & 0xFF;
+            int max = Math.max(r, Math.max(g, b));
+            int min = Math.min(r, Math.min(g, b));
+            if (max > 0 && max != min) {
+                double currentSat = (max - min) / (double) max;
+                double targetSat = Math.min(1.0, currentSat * saturationBoost);
+                double scale = targetSat / currentSat;
+                r = (int) Math.round(max - (max - r) * scale);
+                g = (int) Math.round(max - (max - g) * scale);
+                b = (int) Math.round(max - (max - b) * scale);
+            }
         }
 
         // 3. Peak Luminance Soft-Limiting

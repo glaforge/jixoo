@@ -13,24 +13,19 @@ Empirical analysis and hardware-tested guidelines for creating animations and ar
 
 ---
 
-## 2. Core Physical LED Laws
+## 2. Core Physical & Temporal Laws
 
-1. **TRUE-BLACK LED-OFF LAW**: Always clamp dark/background pixels (`max(R, G, B) <= 15`) to exact `#000000`. On the Pixoo-64, `#000000` physically powers off the LED; `RGB(8, 8, 12)` turns the LED on at minimum PWM duty cycle, producing a cloudy gray haze and potential coil whine.
-2. **DIFFUSER SATURATION BOOST**: Physical LED cells sit behind a matte plastic grid diffuser. Keep foreground accent saturation `>= 0.65` (HSV) and avoid desaturated mid-tone grays or muddy browns.
-3. **NEAREST-NEIGHBOR SHARPNESS**: Never downscale pixel art to 64×64 with bilinear interpolation without crisp nearest-neighbor sampling. Blended boundary pixels create dim, muddy halos on a physical matrix.
-4. **CONTROLLED NEON BLOOM**: When simulating glowing neon or fire, use a 3-step ramp: bright core (`L > 220`) -> 1px saturated halo (`L ~ 110`) -> hard drop to `#000000`.
-
----
-
-## 3. Temporal Pacing & Motion Laws
-
-1. **THE 32-FRAME HARDWARE CEILING**: The Pixoo-64 HTTP GIF buffer reliably plays up to 30–32 frames. Keep custom animations between 4 and 28 frames (`8–16` frames is the sweet spot).
-2. **KEYFRAME RHYTHM & HOLDS**: 8–12 FPS (80–125ms per frame) is the sweet spot for pixel motion, with 200–400ms holds on rest/impact keyframes.
-3. **SEAMLESS LOOP CLOSURE**: Ensure the final frame transitions smoothly back to Frame 0 using modular phase math, ping-pong oscillation, or looping particle resets.
+See [pixoo64-led-bible.md](pixoo64-led-bible.md) for the complete optical, color, and temporal hardware rules:
+1. **True-Black LED-Off Law**: Clamp dark/background pixels (`max(R, G, B) <= 15`) to `#000000` (`--led-optimize`).
+2. **Diffuser Saturation Boost**: Keep foreground accent HSV saturation `>= 0.65` and use hue-shifted shading instead of desaturated grays/browns.
+3. **Nearest-Neighbor Sharpness**: Always downscale pixel art with nearest-neighbor sampling (`--nearest`).
+4. **Controlled Neon Bloom**: Use a discrete 3-step ramp (`L > 220` core -> `L ~ 100–140` 1px halo -> `#000000` cutoff).
+5. **The 32-Frame Ceiling & Keyframe Holds**: Keep custom HTTP GIFs between `4` and `28` frames (`8–12 FPS`, `80–125ms` per frame) with `180–350ms` holds on rest/impact keyframes.
+6. **Seamless Loop Closure**: Ensure the final frame transitions smoothly back to Frame 0 using modular phase math, ping-pong oscillation, or looping particle resets.
 
 ---
 
-## 4. Patterns by Visual Archetype
+## 3. Patterns by Visual Archetype
 
 ### Archetype 1: `scenic-loop` (Environments, Cityscapes, Nature)
 - **Ideal Frame Count**: `8 – 24` frames

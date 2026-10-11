@@ -41,11 +41,11 @@ curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?k
 The `jixoo64` CLI automatically handles resizing the image to the 64x64 canvas.
 
 ```bash
-# Auto-resized and centered
-pixoo-cli -H 192.168.86.161 image image.png
+# Auto-resized with nearest-neighbor sampling and LED true-black optimization
+pixoo-cli -H 192.168.86.161 image --nearest --led-optimize image.png
 
 # Or cropped to fill 64x64 without black letterbox bars
-pixoo-cli -H 192.168.86.161 image --crop image.png
+pixoo-cli -H 192.168.86.161 image --crop --nearest --led-optimize image.png
 ```
 
 ---
@@ -70,7 +70,7 @@ ffmpeg -framerate 10 -i frame_%02d.png \
 Upload the custom GIF animation to the device:
 
 ```bash
-pixoo-cli -H 192.168.86.161 gif -f animation.gif
+pixoo-cli -H 192.168.86.161 gif --nearest --led-optimize -f animation.gif
 ```
 
 ---
@@ -134,5 +134,5 @@ ffmpeg -i output.mp4 -vf "crop=in_h:in_h,scale=64:64,split[s0][s1];[s0]palettege
 Send the converted video animation to the device:
 
 ```bash
-pixoo-cli -H 192.168.86.161 gif -f output_hq.gif
+pixoo-cli -H 192.168.86.161 gif --led-optimize -f output_hq.gif
 ```

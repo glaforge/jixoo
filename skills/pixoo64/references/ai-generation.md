@@ -34,7 +34,7 @@ curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/interactions?k
 
 ### Display it:
 ```bash
-pixoo-cli image image.png
+pixoo-cli image --nearest --led-optimize image.png
 ```
 
 For advanced prompt templates including **2×2 sprite sheets**, **multi-turn animations**, and **archetype prompts**, see:
@@ -72,7 +72,7 @@ curl -s -L -H "x-goog-api-key: $GEMINI_API_KEY" "$URI" -o output.mp4
 Use the bundled script `scripts/video_to_gif.sh` to crop, scale, and convert the video into an optimized GIF:
 ```bash
 bash scripts/video_to_gif.sh output.mp4 output_hq.gif
-pixoo-cli gif -f output_hq.gif
+pixoo-cli gif --nearest --led-optimize -f output_hq.gif
 ```
 
 ---

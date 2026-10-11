@@ -187,4 +187,28 @@ class PixooImageTest {
         assertNotEquals(0xFFFF0000, blendPixel);
         assertNotEquals(0xFF00FF00, blendPixel);
     }
+
+    @Test
+    void testNearestNeighborDownscaling() {
+        // Create a 128x128 pixel art image composed of 2x2 blocks alternating Red and Cyan
+        int[] pixels = new int[128 * 128];
+        for (int y = 0; y < 128; y++) {
+            for (int x = 0; x < 128; x++) {
+                boolean isEvenCell = (((x / 2) + (y / 2)) % 2) == 0;
+                pixels[y * 128 + x] = isEvenCell ? 0xFFFF0000 : 0xFF00FFFF;
+            }
+        }
+        PixooImage hiRes = new PixooImage(128, 128, pixels);
+
+        PixooImage downscaled = hiRes.resizeAndFit(64, 64, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.NEAREST_NEIGHBOR);
+        assertEquals(64, downscaled.width());
+        assertEquals(64, downscaled.height());
+
+        for (int y = 0; y < 64; y++) {
+            for (int x = 0; x < 64; x++) {
+                int expected = (((x + y) % 2) == 0) ? 0xFFFF0000 : 0xFF00FFFF;
+                assertEquals(expected, downscaled.getPixel(x, y));
+            }
+        }
+    }
 }

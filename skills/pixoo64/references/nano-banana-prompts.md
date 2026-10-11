@@ -31,6 +31,19 @@ Use high-contrast, hyper-saturated LED colors ([PALETTE_HINTS]), crisp 1-pixel e
 
 *Why it works*: Generating all 4 frames in a single square image forces Gemini to preserve identical character proportions, lighting, and palette across frames.
 
+**Slicing a 2×2 Sprite Sheet into a 4-Frame 64×64 GIF (`ffmpeg`)**:
+```bash
+ffmpeg -i sprite_sheet.png -filter_complex \
+  "[0:v]crop=iw/2:ih/2:0:0,scale=64:64:flags=neighbor[f0]; \
+   [0:v]crop=iw/2:ih/2:iw/2:0,scale=64:64:flags=neighbor[f1]; \
+   [0:v]crop=iw/2:ih/2:0:ih/2,scale=64:64:flags=neighbor[f2]; \
+   [0:v]crop=iw/2:ih/2:iw/2:ih/2,scale=64:64:flags=neighbor[f3]; \
+   [f0][f1][f2][f3]concat=n=4:v=1:a=0,settb=1/8,setpts=N,split[s0][s1]; \
+   [s0]palettegen=stats_mode=full[p];[s1][p]paletteuse=dither=none" \
+  -r 8 -loop 0 sprite_loop.gif
+pixoo-cli gif --nearest --led-optimize -f sprite_loop.gif
+```
+
 ---
 
 ### 2. Scenic Lo-Fi / Cyberpunk Scene

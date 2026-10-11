@@ -12,5 +12,5 @@ INPUT_PATTERN="$1"
 OUTPUT_GIF="$2"
 
 echo "Converting $INPUT_PATTERN to $OUTPUT_GIF..."
-ffmpeg -framerate 10 -i "$INPUT_PATTERN" -vf "scale=64:64" -sws_dither none "$OUTPUT_GIF"
+ffmpeg -framerate 10 -i "$INPUT_PATTERN" -vf "scale=64:64:flags=neighbor" -sws_dither none "$OUTPUT_GIF"
 echo "Done!"

@@ -41,6 +41,7 @@ class LedPostProcessorTest {
         assertThrows(IllegalArgumentException.class, () -> LedPostProcessor.builder().maxLuminance(256).build());
         assertThrows(IllegalArgumentException.class, () -> LedPostProcessor.builder().saturationBoost(0.0).build());
         assertThrows(IllegalArgumentException.class, () -> LedPostProcessor.builder().saturationBoost(4.0).build());
+        assertThrows(IllegalArgumentException.class, () -> LedPostProcessor.builder().saturationBoost(Double.NaN).build());
     }
 
     @Test
@@ -54,8 +55,8 @@ class LedPostProcessorTest {
         pixels[1] = 0xFF000000 | (25 << 16) | (10 << 8) | 10;
         // Pure red: RGB(220, 0, 0) -> should be kept
         pixels[2] = 0xFFDC0000;
-        // Pure black already
-        pixels[3] = 0xFF000000;
+        // Semi-transparent bright pixel: RGB(200, 200, 200) with alpha=10 -> effective RGB(7, 7, 7) <= 20 -> should clamp to #000000
+        pixels[3] = (10 << 24) | (200 << 16) | (200 << 8) | 200;
 
         PixooImage input = new PixooImage(2, 2, pixels);
         PixooImage output = proc.process(input);
@@ -67,8 +68,37 @@ class LedPostProcessorTest {
         assertEquals(25, (output.getPixel(1, 0) >> 16) & 0xFF);
         // Pure red kept
         assertEquals(0xFFDC0000, output.getPixel(0, 1));
-        // Pure black kept
+        // Low-alpha pixel whose composited luminance <= 20 clamped to #000000
         assertEquals(0xFF000000, output.getPixel(1, 1));
+    }
+
+    @Test
+    void testSaturationBoost() {
+        LedPostProcessor proc = LedPostProcessor.builder()
+                .maxLuminance(255)
+                .saturationBoost(1.5)
+                .build();
+
+        // Desaturated coral: R=200, G=150, B=100 (S = (200-100)/200 = 0.5)
+        // With 1.5x saturationBoost -> target S = 0.75 (scale = 1.5):
+        // R' = 200, G' = 200 - (50 * 1.5) = 125, B' = 200 - (100 * 1.5) = 50
+        int[] pixels = new int[]{
+                0xFF000000 | (200 << 16) | (150 << 8) | 100,
+                0xFF000000 | (128 << 16) | (128 << 8) | 128 // Pure gray (S = 0) should remain gray
+        };
+
+        PixooImage input = new PixooImage(2, 1, pixels);
+        PixooImage output = proc.process(input);
+
+        int boosted = output.getPixel(0, 0);
+        assertEquals(200, (boosted >> 16) & 0xFF);
+        assertEquals(125, (boosted >> 8) & 0xFF);
+        assertEquals(50, boosted & 0xFF);
+
+        int gray = output.getPixel(1, 0);
+        assertEquals(128, (gray >> 16) & 0xFF);
+        assertEquals(128, (gray >> 8) & 0xFF);
+        assertEquals(128, gray & 0xFF);
     }
 
     @Test
@@ -125,9 +155,7 @@ class LedPostProcessorTest {
     }
 
     @Test
-    void testProcessAnimation() {
-        LedPostProcessor proc = LedPostProcessor.standard();
-
+    void testProcessAnimationAndStaticOptimize() {
         byte[] raw = new byte[12288];
         raw[0] = 12; raw[1] = 12; raw[2] = 12; // near-black
 
@@ -135,11 +163,14 @@ class LedPostProcessorTest {
         PixooFrame f2 = new PixooFrame(raw, 200);
 
         PixooAnimation anim = new PixooAnimation(List.of(f1, f2));
-        PixooAnimation processed = proc.process(anim);
+        PixooAnimation processed = LedPostProcessor.optimize(anim);
 
         assertEquals(2, processed.frameCount());
         assertEquals(100, processed.frames().get(0).delayMs());
         assertEquals(200, processed.frames().get(1).delayMs());
         assertEquals(0, processed.frames().get(0).rgbData()[0]);
+
+        PixooImage img = new PixooImage(1, 1, new int[]{0xFF0A0A0A});
+        assertEquals(0xFF000000, LedPostProcessor.optimize(img).getPixel(0, 0));
     }
 }

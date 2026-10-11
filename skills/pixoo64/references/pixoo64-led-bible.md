@@ -9,7 +9,7 @@ The Divoom Pixoo-64 is a physical **64×64 RGB LED matrix** (4,096 individual SM
 ### 1.1 The True-Black (`#000000`) LED-Off Law
 - On the Pixoo-64, **`#000000` (`RGB(0, 0, 0)`) physically powers the LED off**.
 - Even a tiny non-zero value like `RGB(5, 5, 8)` or `#08080C` forces the LED driver to fire at its minimum PWM duty cycle, creating a visible gray glow inside that cell and bleeding light into adjacent cells.
-- **Rule**: Always clamp dark/shadow background pixels (`max(R, G, B) <= 18`) to exact `#000000`. Aim for **25%–65% True-Black (`#000000`) coverage** so the subject floats seamlessly inside the physical black bezel.
+- **Rule**: Always clamp dark/shadow background pixels (`max(R, G, B) <= 15`, matching `pixoo-cli --led-optimize`) to exact `#000000`. Aim for **25%–60% True-Black (`#000000`) coverage** so the subject floats seamlessly inside the physical black bezel.
 
 ### 1.2 Diffuser Saturation Boost & Anti-Muddiness
 - Because light passes through a matte diffuser, low-saturation colors (`HSV Saturation < 0.30`) and mid-tone grays/browns lose their hue identity and appear chalky.
