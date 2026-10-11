@@ -218,11 +218,14 @@ pixoo-cli image --crop path/to/photo.jpg
 # Display pixel art with crisp nearest-neighbor sampling (no bilinear blurring)
 pixoo-cli image --nearest path/to/pixel_art.png
 
+# Display image with hardware LED optimization (clamps near-black noise to #000000 and soft-limits glare)
+pixoo-cli image --led-optimize path/to/artwork.png
+
 # Display local animated GIF
 pixoo-cli gif --file path/to/animation.gif
 
-# Display pixel art GIF with nearest-neighbor sampling
-pixoo-cli gif --nearest --file path/to/pixel_art.gif
+# Display pixel art GIF with nearest-neighbor sampling and LED optimization
+pixoo-cli gif --nearest --led-optimize --file path/to/pixel_art.gif
 
 # Stream remote HTTP/HTTPS GIF (auto-downloaded, scaled, and streamed client-side)
 pixoo-cli gif --url "http://example.com/animation.gif"

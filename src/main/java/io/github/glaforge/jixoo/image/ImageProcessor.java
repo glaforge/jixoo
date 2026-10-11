@@ -62,8 +62,22 @@ public class ImageProcessor {
      * @throws PixooException if the image cannot be loaded
      */
     public static PixooImage loadImage(Path path) {
+        return loadImage(path, ScaleMode.FIT_CENTER, SamplingMode.BILINEAR);
+    }
+
+    /**
+     * Loads an image from the specified path into a {@link PixooImage}, applying the given scale and sampling modes
+     * when decoding GIF inputs.
+     *
+     * @param path         the path to load the image from
+     * @param scaleMode    the scale mode to use if the file is a GIF
+     * @param samplingMode the sampling mode to use if the file is a GIF
+     * @return the loaded PixooImage
+     * @throws PixooException if the image cannot be loaded
+     */
+    public static PixooImage loadImage(Path path, ScaleMode scaleMode, SamplingMode samplingMode) {
         try (InputStream is = Files.newInputStream(path)) {
-            return loadImage(is, path.getFileName().toString());
+            return loadImage(is, path.getFileName().toString(), scaleMode, samplingMode);
         } catch (PixooException e) {
             throw e;
         } catch (Exception e) {
@@ -79,13 +93,21 @@ public class ImageProcessor {
      * @throws PixooException if the image cannot be loaded
      */
     public static PixooImage loadImage(InputStream inputStream) {
-        return loadImage(inputStream, null);
+        return loadImage(inputStream, null, ScaleMode.FIT_CENTER, SamplingMode.BILINEAR);
     }
 
     /**
      * Loads an image from stream using file signature detection with an optional filename hint.
      */
     public static PixooImage loadImage(InputStream inputStream, String fileNameHint) {
+        return loadImage(inputStream, fileNameHint, ScaleMode.FIT_CENTER, SamplingMode.BILINEAR);
+    }
+
+    /**
+     * Loads an image from stream using file signature detection with an optional filename hint,
+     * applying the given scale and sampling modes when decoding GIF inputs.
+     */
+    public static PixooImage loadImage(InputStream inputStream, String fileNameHint, ScaleMode scaleMode, SamplingMode samplingMode) {
         try {
             byte[] bytes = inputStream.readAllBytes();
             if (bytes.length < 4) {
@@ -98,7 +120,7 @@ public class ImageProcessor {
             } else if (isBmp(bytes)) {
                 return BmpDecoder.decode(new ByteArrayInputStream(bytes));
             } else if (isGif(bytes)) {
-                PixooAnimation anim = GifDecoder.decode(bytes);
+                PixooAnimation anim = GifDecoder.decode(bytes, scaleMode, samplingMode);
                 // Return first frame of GIF as PixooImage
                 byte[] rgbData = anim.frames().get(0).rgbData();
                 return rawRgbToPixooImage(rgbData, 64, 64);
@@ -112,7 +134,7 @@ public class ImageProcessor {
                 } else if (lower.endsWith(".bmp")) {
                     return BmpDecoder.decode(new ByteArrayInputStream(bytes));
                 } else if (lower.endsWith(".gif")) {
-                    PixooAnimation anim = GifDecoder.decode(bytes);
+                    PixooAnimation anim = GifDecoder.decode(bytes, scaleMode, samplingMode);
                     byte[] rgbData = anim.frames().get(0).rgbData();
                     return rawRgbToPixooImage(rgbData, 64, 64);
                 }
@@ -240,6 +262,13 @@ public class ImageProcessor {
      */
     public static PixooAnimation processImage(BufferedImage input) {
         return processImage(PixooImage.fromBufferedImage(input), ScaleMode.FIT_CENTER, SamplingMode.BILINEAR);
+    }
+
+    /**
+     * Processes a BufferedImage into a single-frame PixooAnimation with the specified scale mode and bilinear interpolation.
+     */
+    public static PixooAnimation processImage(BufferedImage input, ScaleMode scaleMode) {
+        return processImage(PixooImage.fromBufferedImage(input), scaleMode, SamplingMode.BILINEAR);
     }
 
     /**

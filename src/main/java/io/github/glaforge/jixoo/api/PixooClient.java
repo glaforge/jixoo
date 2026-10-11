@@ -17,6 +17,7 @@ package io.github.glaforge.jixoo.api;
 
 import io.github.glaforge.jixoo.image.GifDecoder;
 import io.github.glaforge.jixoo.image.ImageProcessor;
+import io.github.glaforge.jixoo.image.LedPostProcessor;
 import io.github.glaforge.jixoo.image.PixooImage;
 import io.github.glaforge.jixoo.internal.HttpPixooClient;
 import io.github.glaforge.jixoo.model.PixooAnimation;
@@ -206,19 +207,13 @@ public interface PixooClient extends AutoCloseable {
     }
 
     /**
-     * Resizes and sends a PixooImage to the display.
-     *
-     * @param image the image to process and send
-     * @return the device's response
-     */
-    /**
-     * Resizes and sends a static PixooImage to the display using FIT_CENTER.
+     * Resizes and sends a static PixooImage to the display using FIT_CENTER and bilinear interpolation.
      *
      * @param image the image to process and send
      * @return the device's response
      */
     default PixooResponse sendImage(PixooImage image) {
-        return sendImage(image, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
+        return sendImage(image, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -229,7 +224,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response
      */
     default PixooResponse sendImage(PixooImage image, ImageProcessor.ScaleMode scaleMode) {
-        return sendImage(image, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
+        return sendImage(image, scaleMode, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -241,7 +236,37 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response
      */
     default PixooResponse sendImage(PixooImage image, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
-        return sendAnimation(ImageProcessor.processImage(image, scaleMode, samplingMode));
+        return sendImage(image, scaleMode, samplingMode, null);
+    }
+
+    /**
+     * Resizes, post-processes with an LED optimization filter, and sends a static PixooImage to the display.
+     *
+     * @param image         the image to process and send
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param postProcessor the LED filter to apply (e.g. true-black clamping), or null for none
+     * @return the device's response
+     */
+    default PixooResponse sendImage(PixooImage image, ImageProcessor.ScaleMode scaleMode, LedPostProcessor postProcessor) {
+        return sendImage(image, scaleMode, ImageProcessor.SamplingMode.BILINEAR, postProcessor);
+    }
+
+    /**
+     * Resizes with the specified scaling and sampling mode, optionally post-processes with an LED filter,
+     * and sends a static PixooImage to the display.
+     *
+     * @param image         the image to process and send
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode  the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @param postProcessor the LED filter to apply (e.g. true-black clamping), or null for none
+     * @return the device's response
+     */
+    default PixooResponse sendImage(PixooImage image, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode, LedPostProcessor postProcessor) {
+        PixooImage processed = ImageProcessor.resizeAndFit(image, scaleMode, samplingMode);
+        if (postProcessor != null) {
+            processed = postProcessor.process(processed);
+        }
+        return sendAnimation(PixooAnimation.singleImage(processed));
     }
 
     /**
@@ -251,7 +276,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response
      */
     default PixooResponse sendImage(BufferedImage image) {
-        return sendImage(PixooImage.fromBufferedImage(image), ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
+        return sendImage(PixooImage.fromBufferedImage(image), ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -262,7 +287,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response
      */
     default PixooResponse sendImage(BufferedImage image, ImageProcessor.ScaleMode scaleMode) {
-        return sendImage(PixooImage.fromBufferedImage(image), scaleMode, ImageProcessor.SamplingMode.BILINEAR);
+        return sendImage(PixooImage.fromBufferedImage(image), scaleMode, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -274,7 +299,33 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response
      */
     default PixooResponse sendImage(BufferedImage image, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
-        return sendImage(PixooImage.fromBufferedImage(image), scaleMode, samplingMode);
+        return sendImage(PixooImage.fromBufferedImage(image), scaleMode, samplingMode, null);
+    }
+
+    /**
+     * Resizes, post-processes with an LED optimization filter, and sends a static BufferedImage to the display.
+     *
+     * @param image         the image to process and send
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param postProcessor the LED filter to apply (e.g. true-black clamping), or null for none
+     * @return the device's response
+     */
+    default PixooResponse sendImage(BufferedImage image, ImageProcessor.ScaleMode scaleMode, LedPostProcessor postProcessor) {
+        return sendImage(PixooImage.fromBufferedImage(image), scaleMode, ImageProcessor.SamplingMode.BILINEAR, postProcessor);
+    }
+
+    /**
+     * Resizes with the specified scaling and sampling mode, optionally post-processes with an LED filter,
+     * and sends a static BufferedImage to the display.
+     *
+     * @param image         the image to process and send
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode  the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @param postProcessor the LED filter to apply (e.g. true-black clamping), or null for none
+     * @return the device's response
+     */
+    default PixooResponse sendImage(BufferedImage image, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode, LedPostProcessor postProcessor) {
+        return sendImage(PixooImage.fromBufferedImage(image), scaleMode, samplingMode, postProcessor);
     }
 
     /**
@@ -284,7 +335,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response
      */
     default PixooResponse sendImage(Path path) {
-        return sendImage(path, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
+        return sendImage(path, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -295,7 +346,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response
      */
     default PixooResponse sendImage(Path path, ImageProcessor.ScaleMode scaleMode) {
-        return sendImage(path, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
+        return sendImage(path, scaleMode, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -307,7 +358,33 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response
      */
     default PixooResponse sendImage(Path path, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
-        return sendImage(ImageProcessor.loadImage(path), scaleMode, samplingMode);
+        return sendImage(path, scaleMode, samplingMode, null);
+    }
+
+    /**
+     * Loads, resizes, post-processes with an LED optimization filter, and sends an image file to the display.
+     *
+     * @param path          the path to the image file
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param postProcessor the LED filter to apply (e.g. true-black clamping), or null for none
+     * @return the device's response
+     */
+    default PixooResponse sendImage(Path path, ImageProcessor.ScaleMode scaleMode, LedPostProcessor postProcessor) {
+        return sendImage(path, scaleMode, ImageProcessor.SamplingMode.BILINEAR, postProcessor);
+    }
+
+    /**
+     * Loads, resizes with the specified scaling and sampling mode, optionally post-processes with an LED filter,
+     * and sends an image file to the display.
+     *
+     * @param path          the path to the image file
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode  the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @param postProcessor the LED filter to apply (e.g. true-black clamping), or null for none
+     * @return the device's response
+     */
+    default PixooResponse sendImage(Path path, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode, LedPostProcessor postProcessor) {
+        return sendImage(ImageProcessor.loadImage(path, scaleMode, samplingMode), scaleMode, samplingMode, postProcessor);
     }
 
     /**
@@ -317,7 +394,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(InputStream gifStream) {
-        return sendGif(gifStream, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
+        return sendGif(gifStream, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -328,7 +405,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(InputStream gifStream, ImageProcessor.ScaleMode scaleMode) {
-        return sendGif(gifStream, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
+        return sendGif(gifStream, scaleMode, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -340,7 +417,37 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(InputStream gifStream, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
-        return sendAnimation(GifDecoder.decode(gifStream, scaleMode, samplingMode));
+        return sendGif(gifStream, scaleMode, samplingMode, null);
+    }
+
+    /**
+     * Decodes, post-processes with an LED optimization filter, and displays a GIF from an InputStream.
+     *
+     * @param gifStream     the input stream containing the GIF data
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param postProcessor the LED filter to apply, or null for none
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(InputStream gifStream, ImageProcessor.ScaleMode scaleMode, LedPostProcessor postProcessor) {
+        return sendGif(gifStream, scaleMode, ImageProcessor.SamplingMode.BILINEAR, postProcessor);
+    }
+
+    /**
+     * Decodes with the specified scaling and sampling mode, optionally post-processes with an LED filter,
+     * and displays a GIF from an InputStream.
+     *
+     * @param gifStream     the input stream containing the GIF data
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode  the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @param postProcessor the LED filter to apply, or null for none
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(InputStream gifStream, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode, LedPostProcessor postProcessor) {
+        PixooAnimation anim = GifDecoder.decode(gifStream, scaleMode, samplingMode);
+        if (postProcessor != null) {
+            anim = postProcessor.process(anim);
+        }
+        return sendAnimation(anim);
     }
 
     /**
@@ -350,7 +457,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(Path gifPath) {
-        return sendGif(gifPath, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
+        return sendGif(gifPath, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -361,7 +468,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(Path gifPath, ImageProcessor.ScaleMode scaleMode) {
-        return sendGif(gifPath, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
+        return sendGif(gifPath, scaleMode, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -373,7 +480,37 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(Path gifPath, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
-        return sendAnimation(GifDecoder.decode(gifPath, scaleMode, samplingMode));
+        return sendGif(gifPath, scaleMode, samplingMode, null);
+    }
+
+    /**
+     * Decodes, post-processes with an LED optimization filter, and displays a GIF from a Path.
+     *
+     * @param gifPath       the path to the GIF file
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param postProcessor the LED filter to apply, or null for none
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(Path gifPath, ImageProcessor.ScaleMode scaleMode, LedPostProcessor postProcessor) {
+        return sendGif(gifPath, scaleMode, ImageProcessor.SamplingMode.BILINEAR, postProcessor);
+    }
+
+    /**
+     * Decodes with the specified scaling and sampling mode, optionally post-processes with an LED filter,
+     * and displays a GIF from a Path.
+     *
+     * @param gifPath       the path to the GIF file
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode  the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @param postProcessor the LED filter to apply, or null for none
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(Path gifPath, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode, LedPostProcessor postProcessor) {
+        PixooAnimation anim = GifDecoder.decode(gifPath, scaleMode, samplingMode);
+        if (postProcessor != null) {
+            anim = postProcessor.process(anim);
+        }
+        return sendAnimation(anim);
     }
 
     /**
@@ -385,7 +522,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(URI gifUri) {
-        return sendGif(gifUri, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
+        return sendGif(gifUri, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -398,7 +535,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(URI gifUri, ImageProcessor.ScaleMode scaleMode) {
-        return sendGif(gifUri, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
+        return sendGif(gifUri, scaleMode, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -410,6 +547,32 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGif(URI gifUri, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
+        return sendGif(gifUri, scaleMode, samplingMode, null);
+    }
+
+    /**
+     * Downloads, decodes, scales, post-processes with an LED optimization filter, and displays a GIF from a remote HTTP or HTTPS URI.
+     *
+     * @param gifUri        the HTTP/HTTPS URI of the GIF
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param postProcessor the LED filter to apply, or null for none
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(URI gifUri, ImageProcessor.ScaleMode scaleMode, LedPostProcessor postProcessor) {
+        return sendGif(gifUri, scaleMode, ImageProcessor.SamplingMode.BILINEAR, postProcessor);
+    }
+
+    /**
+     * Downloads, decodes, scales with the specified scaling and sampling mode, optionally post-processes with an LED filter,
+     * and displays an animated or static GIF from a remote HTTP or HTTPS URI.
+     *
+     * @param gifUri        the HTTP/HTTPS URI of the GIF
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode  the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @param postProcessor the LED filter to apply, or null for none
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGif(URI gifUri, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode, LedPostProcessor postProcessor) {
         try {
             HttpClient httpClient = HttpClient.newBuilder()
                     .followRedirects(HttpClient.Redirect.NORMAL)
@@ -426,7 +589,7 @@ public interface PixooClient extends AutoCloseable {
                 throw new io.github.glaforge.jixoo.api.exception.PixooException(
                         "Failed to download GIF from " + gifUri + ": HTTP " + resp.statusCode());
             }
-            return sendGif(new ByteArrayInputStream(resp.body()), scaleMode, samplingMode);
+            return sendGif(new ByteArrayInputStream(resp.body()), scaleMode, samplingMode, postProcessor);
         } catch (io.github.glaforge.jixoo.api.exception.PixooException e) {
             throw e;
         } catch (Exception e) {
@@ -442,7 +605,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGifUrl(String gifUrl) {
-        return sendGifUrl(gifUrl, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR);
+        return sendGifUrl(gifUrl, ImageProcessor.ScaleMode.FIT_CENTER, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -453,7 +616,7 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGifUrl(String gifUrl, ImageProcessor.ScaleMode scaleMode) {
-        return sendGifUrl(gifUrl, scaleMode, ImageProcessor.SamplingMode.BILINEAR);
+        return sendGifUrl(gifUrl, scaleMode, ImageProcessor.SamplingMode.BILINEAR, null);
     }
 
     /**
@@ -465,7 +628,33 @@ public interface PixooClient extends AutoCloseable {
      * @return the device's response to the final frame sent
      */
     default PixooResponse sendGifUrl(String gifUrl, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode) {
-        return sendGif(URI.create(gifUrl), scaleMode, samplingMode);
+        return sendGif(URI.create(gifUrl), scaleMode, samplingMode, null);
+    }
+
+    /**
+     * Downloads, decodes, scales, post-processes with an LED optimization filter, and displays a GIF from a remote HTTP or HTTPS URL string.
+     *
+     * @param gifUrl        the HTTP/HTTPS URL string of the GIF
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param postProcessor the LED filter to apply, or null for none
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGifUrl(String gifUrl, ImageProcessor.ScaleMode scaleMode, LedPostProcessor postProcessor) {
+        return sendGif(URI.create(gifUrl), scaleMode, ImageProcessor.SamplingMode.BILINEAR, postProcessor);
+    }
+
+    /**
+     * Downloads, decodes, scales with the specified scaling and sampling mode, optionally post-processes with an LED filter,
+     * and displays an animated or static GIF from a remote HTTP or HTTPS URL string.
+     *
+     * @param gifUrl        the HTTP/HTTPS URL string of the GIF
+     * @param scaleMode     the scale mode (FIT_CENTER, FILL_CROP, STRETCH)
+     * @param samplingMode  the sampling mode (BILINEAR, NEAREST_NEIGHBOR)
+     * @param postProcessor the LED filter to apply, or null for none
+     * @return the device's response to the final frame sent
+     */
+    default PixooResponse sendGifUrl(String gifUrl, ImageProcessor.ScaleMode scaleMode, ImageProcessor.SamplingMode samplingMode, LedPostProcessor postProcessor) {
+        return sendGif(URI.create(gifUrl), scaleMode, samplingMode, postProcessor);
     }
 
     /**

@@ -18,6 +18,9 @@ package io.github.glaforge.jixoo.cli.command;
 import io.github.glaforge.jixoo.api.PixooClient;
 import io.github.glaforge.jixoo.api.PixooResponse;
 import io.github.glaforge.jixoo.cli.PixooCli;
+import io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode;
+import io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode;
+import io.github.glaforge.jixoo.image.LedPostProcessor;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
@@ -58,7 +61,7 @@ public class ImageCommand implements Callable<Integer> {
             names = {"-s", "--scale-mode"},
             description = "Scale mode for fitting onto 64x64 canvas: FIT_CENTER, FILL_CROP, STRETCH"
     )
-    private io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode scaleMode;
+    private ScaleMode scaleMode;
 
     @Option(
             names = {"-n", "--nearest"},
@@ -70,7 +73,19 @@ public class ImageCommand implements Callable<Integer> {
             names = {"-m", "--sampling-mode"},
             description = "Sampling mode for scaling: BILINEAR (default), NEAREST_NEIGHBOR"
     )
-    private io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode samplingMode;
+    private SamplingMode samplingMode;
+
+    @Option(
+            names = {"-o", "--led-optimize"},
+            description = "Apply physical LED matrix optimization (true-black clamping and glare reduction)"
+    )
+    private boolean ledOptimize;
+
+    @Option(
+            names = {"--black-threshold"},
+            description = "Threshold (0-255) below which dark pixels are clamped to true #000000 (default: 15)"
+    )
+    private Integer blackThreshold;
 
     @Parameters(
             index = "0",
@@ -86,19 +101,29 @@ public class ImageCommand implements Callable<Integer> {
             return 1;
         }
 
-        io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode mode = scaleMode != null
+        ScaleMode mode = scaleMode != null
                 ? scaleMode
-                : (crop ? io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode.FILL_CROP
-                        : io.github.glaforge.jixoo.image.ImageProcessor.ScaleMode.FIT_CENTER);
+                : (crop ? ScaleMode.FILL_CROP : ScaleMode.FIT_CENTER);
 
-        io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode sampleMode = samplingMode != null
+        SamplingMode sampleMode = samplingMode != null
                 ? samplingMode
-                : (nearest ? io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode.NEAREST_NEIGHBOR
-                           : io.github.glaforge.jixoo.image.ImageProcessor.SamplingMode.BILINEAR);
+                : (nearest ? SamplingMode.NEAREST_NEIGHBOR : SamplingMode.BILINEAR);
+
+        boolean applyLedOptimize = ledOptimize || blackThreshold != null;
+        int threshold = blackThreshold != null ? blackThreshold : LedPostProcessor.DEFAULT_BLACK_THRESHOLD;
+        LedPostProcessor postProcessor = applyLedOptimize
+                ? LedPostProcessor.builder().blackThreshold(threshold).build()
+                : null;
 
         PixooClient client = parent.createClient();
-        spec.commandLine().getOut().printf("Processing and sending image: %s (%s, %s)...%n", path.getFileName(), mode, sampleMode);
-        PixooResponse response = client.sendImage(path, mode, sampleMode);
+        if (applyLedOptimize) {
+            spec.commandLine().getOut().printf("Processing and sending image with LED optimization: %s (%s, %s, blackThreshold=%d)...%n",
+                    path.getFileName(), mode, sampleMode, threshold);
+        } else {
+            spec.commandLine().getOut().printf("Processing and sending image: %s (%s, %s)...%n",
+                    path.getFileName(), mode, sampleMode);
+        }
+        PixooResponse response = client.sendImage(path, mode, sampleMode, postProcessor);
         if (response.isSuccess()) {
             spec.commandLine().getOut().printf("Successfully displayed image: %s.%n", path.getFileName());
             return 0;

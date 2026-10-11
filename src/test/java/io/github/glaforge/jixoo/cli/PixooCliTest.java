@@ -184,6 +184,34 @@ class PixooCliTest {
     }
 
     @Test
+    @DisplayName("Image subcommand should parse --led-optimize and --black-threshold options")
+    void testImageLedOptimizeOptionsParsing() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter err = new StringWriter();
+        cmd.setErr(new PrintWriter(err));
+
+        int exitCode = cmd.execute("--host", "192.168.1.100", "image", "--led-optimize", "--black-threshold", "20", "/non/existent/path/photo.png");
+        assertEquals(1, exitCode);
+        assertTrue(err.toString().contains("does not exist"));
+    }
+
+    @Test
+    @DisplayName("Gif subcommand should parse --led-optimize and --black-threshold options")
+    void testGifLedOptimizeOptionsParsing() {
+        PixooCli cli = new PixooCli();
+        CommandLine cmd = new CommandLine(cli);
+
+        StringWriter err = new StringWriter();
+        cmd.setErr(new PrintWriter(err));
+
+        int exitCode = cmd.execute("--host", "192.168.1.100", "gif", "--led-optimize", "--black-threshold", "20", "-f", "/non/existent/path/anim.gif");
+        assertEquals(1, exitCode);
+        assertTrue(err.toString().contains("does not exist"));
+    }
+
+    @Test
     @DisplayName("Gif subcommand should fail if neither --file nor --url is provided")
     void testGifMissingParams() {
         PixooCli cli = new PixooCli();

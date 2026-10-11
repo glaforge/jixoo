@@ -297,6 +297,9 @@ pixoo-cli image -s FILL_CROP path/to/photo.jpg
 
 # Display pixel art with crisp nearest-neighbor sampling (no bilinear blurring)
 pixoo-cli image --nearest path/to/pixel_art.png
+
+# Display image with hardware LED optimization (true-black clamping & glare soft-limiting)
+pixoo-cli image --led-optimize path/to/artwork.png
 ```
 
 Options:
@@ -304,6 +307,8 @@ Options:
 - `-s`, `--scale-mode=<mode>`: Scaling mode (`FIT_CENTER`, `FILL_CROP`, `STRETCH`).
 - `-n`, `--nearest`: Use nearest-neighbor (point) sampling instead of bilinear interpolation (preserves crisp pixel art).
 - `-m`, `--sampling-mode=<mode>`: Explicit sampling algorithm (`BILINEAR`, `NEAREST_NEIGHBOR`).
+- `-o`, `--led-optimize`: Apply physical LED matrix optimization (true-black clamping to `#000000` and glare reduction).
+- `--black-threshold=<val>`: Threshold (0-255) below which dark pixels clamp to `#000000` (default: 15).
 
 ---
 
@@ -318,6 +323,9 @@ pixoo-cli gif --crop --file path/to/animation.gif
 
 # Play pixel art GIF with crisp nearest-neighbor sampling
 pixoo-cli gif --nearest --file path/to/pixel_art.gif
+
+# Local GIF with hardware LED optimization
+pixoo-cli gif --led-optimize --file path/to/animation.gif
 
 # Remote HTTP/HTTPS GIF URL (auto-downloaded, scaled client-side, and streamed safely)
 pixoo-cli gif --url "https://example.com/animation.gif"
@@ -334,6 +342,8 @@ Options:
 - `-s`, `--scale-mode=<mode>`: Scaling mode (`FIT_CENTER`, `FILL_CROP`, `STRETCH`).
 - `-n`, `--nearest`: Use nearest-neighbor sampling instead of bilinear interpolation (preserves crisp pixel art).
 - `-m`, `--sampling-mode=<mode>`: Explicit sampling algorithm (`BILINEAR`, `NEAREST_NEIGHBOR`).
+- `-o`, `--led-optimize`: Apply physical LED matrix optimization (true-black clamping to `#000000` and glare reduction).
+- `--black-threshold=<val>`: Threshold (0-255) below which dark pixels clamp to `#000000` (default: 15).
 - `--direct`: Direct device firmware to fetch URL directly via `Device/PlayTFGif` (bypasses client-side processing).
 
 
