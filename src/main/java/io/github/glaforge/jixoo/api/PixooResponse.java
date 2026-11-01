@@ -47,13 +47,17 @@ public record PixooResponse(
             @JsonProperty("ReturnCode") Object returnCodeObj,
             @JsonProperty("ReturnMessage") String returnMsg
     ) {
-        return errorCodeObj == null && returnCodeObj != null
-                ? fromJson(returnCodeObj, returnMsg)
-                : fromJson(errorCodeObj, errorMsg);
+        if (errorCodeObj != null) {
+            return fromJson(errorCodeObj, errorMsg);
+        }
+        if (returnCodeObj != null) {
+            return fromJson(returnCodeObj, returnMsg);
+        }
+        return new PixooResponse(-1, errorMsg != null ? errorMsg : "Missing status code in device response");
     }
 
     public static PixooResponse fromJson(Object errorCodeObj, String errorMsg) {
-        int code = 0;
+        int code = -1;
         String msg = errorMsg == null || errorMsg.isBlank() ? null : errorMsg;
         if (errorCodeObj instanceof Number n) {
             code = n.intValue();

@@ -72,7 +72,7 @@ public class HttpPixooClient implements PixooClient {
     // Fields every reply may carry, whatever the command: a reply with nothing else holds no data
     private static final Set<String> ENVELOPE_FIELDS = Set.of(
             "error_code", "error_message",
-            "Command", "DeviceId", "PacketFlag", "DeviceType", "ReturnCode", "ReturnMessage", "WifiSingal");
+            "Command", "DeviceId", "PacketFlag", "DeviceType", "ReturnCode", "ReturnMessage", "WifiSingal", "WifiSignal");
 
     private final String ipAddress;
     private final Integer port;
@@ -182,6 +182,9 @@ public class HttpPixooClient implements PixooClient {
             }
 
             JsonNode reply = MAPPER.readTree(response.body());
+            if (reply == null || !reply.isObject()) {
+                throw new PixooException("Invalid or empty JSON response for command " + command.command() + ": " + response.body());
+            }
             PixooResponse status = MAPPER.treeToValue(reply, PixooResponse.class);
             if (reply.has("ReturnCode") && UNKNOWN_COMMAND_MESSAGE.equals(status.errorMessage())) {
                 throw new UnsupportedCommandException(command.command(),
@@ -247,12 +250,18 @@ public class HttpPixooClient implements PixooClient {
         if (targetUri == null) {
             synchronized (this) {
                 if (targetUri == null) {
-                    PixooModelProbe.Detection detection = PixooModelProbe.detect(ipAddress, port, connectTimeout)
-                            .orElseThrow(() -> new PixooException("No Pixoo device answered at " + ipAddress
-                                    + (port != null ? ":" + port : " (tried ports 80 and 9000)")
-                                    + "; check the address, or set the model explicitly"));
-                    log.debug("Detected {} at {}:{}", detection.model(), ipAddress, detection.port());
-                    useModel(detection.model(), detection.port());
+                    requestLock.lock();
+                    try {
+                        PixooModelProbe.Detection detection = PixooModelProbe.detect(ipAddress, port, connectTimeout)
+                                .orElseThrow(() -> new PixooException("No Pixoo device answered at " + ipAddress
+                                        + (port != null ? ":" + port : " (tried ports 80 and 9000)")
+                                        + "; check the address, or set the model explicitly"));
+                        log.debug("Detected {} at {}:{}", detection.model(), ipAddress, detection.port());
+                        useModel(detection.model(), detection.port());
+                        lastRequestEndNanos = System.nanoTime();
+                    } finally {
+                        requestLock.unlock();
+                    }
                 }
             }
         }

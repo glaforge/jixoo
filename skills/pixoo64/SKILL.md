@@ -27,7 +27,7 @@ You can use the `pixoo-cli` tool to directly control the Pixoo 64 device. The CL
 
 When you need to execute a command, first ensure you know the device IP address, which the user can provide or which can be discovered using the `discover` subcommand if on the same local network.
 
-Both the original Pixoo 64 and the **Pixoo-64 II** are supported; the CLI detects the model automatically (`--model pixoo64-ii` skips detection). The Pixoo-64 II does not support every command: system settings (`config set`), sleep timer, storage status, startup channel, Pomodoro and countdowns are unavailable, and fail with a "not supported by this device" error. `gif --direct` (the device downloads the URL itself) is accepted but displays nothing: use the default `gif --url` mode, which decodes the GIF on the computer.
+Both the original Pixoo 64 and the **Pixoo-64 II** are supported; the CLI detects the model automatically (`--model pixoo64-ii` skips detection). The Pixoo-64 II does not support every command: system settings (`config set`), sleep timer, storage status, startup channel, Pomodoro and countdowns are unavailable, and fail with a "not supported by this device" error. On the Pixoo-64 II, `gif --direct` automatically falls back to downloading and streaming the GIF from the computer, though using `gif --url` without `--direct` is still preferred so scaling and LED optimization flags are applied.
 
 For full details on the available commands and how to use them, refer to:
 [pixoo-cli.md](references/pixoo-cli.md)

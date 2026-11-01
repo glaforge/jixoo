@@ -78,6 +78,9 @@ public final class PixooModelProbe {
 
     static Optional<Detection> detect(HttpClient client, String host, List<Endpoint> endpoints, Duration timeout) {
         for (Endpoint endpoint : endpoints) {
+            if (Thread.currentThread().isInterrupted()) {
+                break;
+            }
             Optional<Detection> detection = probe(client, host, endpoint, timeout);
             if (detection.isPresent()) {
                 return detection;
@@ -108,7 +111,7 @@ public final class PixooModelProbe {
             JsonNode reply = MAPPER.readTree(response.body());
             // Each model is recognized by its response envelope
             String statusField = endpoint.model() == PixooModel.PIXOO_64_II ? "ReturnCode" : "error_code";
-            if (reply != null && reply.isObject() && reply.has(statusField)) {
+            if (reply != null && reply.isObject() && reply.path(statusField).asInt(-1) == 0) {
                 return Optional.of(new Detection(endpoint.model(), endpoint.port(), reply));
             }
         } catch (InterruptedException e) {

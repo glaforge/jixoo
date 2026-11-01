@@ -104,6 +104,9 @@ class Pixoo64IIProtocolTest {
 
     @AfterEach
     void tearDown() {
+        if (client != null) {
+            client.close();
+        }
         server.stop(0);
     }
 
@@ -166,16 +169,19 @@ class Pixoo64IIProtocolTest {
 
     @Test
     void clientWithoutModelDetectsPixoo64II() {
-        PixooClient detecting = PixooClient.builder()
+        try (PixooClient detecting = PixooClient.builder()
                 .ipAddress("127.0.0.1")
                 .port(server.getAddress().getPort())
-                .build();
+                .build()) {
 
-        assertEquals(10, detecting.getClockId());
-        assertEquals(PixooModel.PIXOO_64_II, detecting.model());
-        synchronized (receivedCommands) {
-            // One probe on /divoom_api (the /post probe gets a 404), then the command itself
-            assertEquals(List.of("Channel/GetIndex", "Channel/GetClockInfo"), receivedCommands);
+            assertEquals(10, detecting.getClockId());
+            assertEquals(PixooModel.PIXOO_64_II, detecting.model());
+            synchronized (receivedCommands) {
+                // One probe on /divoom_api (the /post probe gets a 404), then the command itself
+                assertEquals(List.of("Channel/GetIndex", "Channel/GetClockInfo"), receivedCommands);
+                long gapMs = (arrivalNanos.get(1) - arrivalNanos.get(0)) / 1_000_000;
+                assertTrue(gapMs >= 30, "probe and first command were only " + gapMs + " ms apart");
+            }
         }
     }
 
@@ -183,26 +189,28 @@ class Pixoo64IIProtocolTest {
     void clientWithoutModelFailsClearlyWhenNothingAnswers() {
         int closedPort = server.getAddress().getPort();
         server.stop(0);
-        PixooClient detecting = PixooClient.builder()
+        try (PixooClient detecting = PixooClient.builder()
                 .ipAddress("127.0.0.1")
                 .port(closedPort)
-                .build();
+                .build()) {
 
-        PixooException e = assertThrows(PixooException.class, () -> detecting.setBrightness(50));
-        assertTrue(e.getMessage().contains("No Pixoo device answered"), e.getMessage());
+            PixooException e = assertThrows(PixooException.class, () -> detecting.setBrightness(50));
+            assertTrue(e.getMessage().contains("No Pixoo device answered"), e.getMessage());
+        }
     }
 
     @Test
     void originalModelClientFailsOnPixoo64II() {
         // The original Pixoo 64 path (/post) does not exist on the Pixoo-64 II
-        PixooClient original = PixooClient.builder()
+        try (PixooClient original = PixooClient.builder()
                 .model(PixooModel.PIXOO_64)
                 .ipAddress("127.0.0.1")
                 .port(server.getAddress().getPort())
-                .build();
+                .build()) {
 
-        PixooException e = assertThrows(PixooException.class, () -> original.setBrightness(50));
-        assertTrue(e.getMessage().contains("404"), e.getMessage());
+            PixooException e = assertThrows(PixooException.class, () -> original.setBrightness(50));
+            assertTrue(e.getMessage().contains("404"), e.getMessage());
+        }
     }
 
     @Test

@@ -105,12 +105,10 @@ public record PixooDevice(
             }
         }
 
-        if (!devices.isEmpty()) {
-            return devices;
-        }
-
         // Strategy 2: System ARP Table + HTTP Probe
-        Map<String, String> arpEntries = getSystemArpTable();
+        // Always probe ARP entries not already found via UDP, since Pixoo-64 II does not respond to UDP broadcast
+        Map<String, String> arpEntries = new LinkedHashMap<>(getSystemArpTable());
+        arpEntries.keySet().removeAll(discoveredIps);
         if (!arpEntries.isEmpty()) {
             List<PixooDevice> arpDevices = probeCandidateIps(arpEntries);
             for (PixooDevice d : arpDevices) {

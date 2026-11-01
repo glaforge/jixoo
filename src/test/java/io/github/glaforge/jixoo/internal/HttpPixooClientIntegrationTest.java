@@ -97,177 +97,151 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @ParameterizedTest
-    @EnumSource(PixooModel.class)
-    void testChannelSelection(PixooModel model) {
-        PixooClient client = PixooClient.builder()
+    private PixooClient newClient(PixooModel model, boolean autoSwitchToCustomChannel) {
+        return PixooClient.builder()
                 .ipAddress("127.0.0.1")
                 .model(model)
                 .port(port)
-                .autoSwitchToCustomChannel(false)
+                .autoSwitchToCustomChannel(autoSwitchToCustomChannel)
                 .build();
+    }
 
-        PixooResponse response = client.selectChannel(PixooChannel.CUSTOM);
-        assertTrue(response.isSuccess());
+    @ParameterizedTest
+    @EnumSource(PixooModel.class)
+    void testChannelSelection(PixooModel model) {
+        try (PixooClient client = newClient(model, false)) {
+            PixooResponse response = client.selectChannel(PixooChannel.CUSTOM);
+            assertTrue(response.isSuccess());
 
-        synchronized (receivedRequests) {
-            assertEquals(1, receivedRequests.size());
-            assertTrue(receivedRequests.get(0).contains("\"Command\":\"Channel/SetIndex\""));
-            assertTrue(receivedRequests.get(0).contains("\"SelectIndex\":3"));
+            synchronized (receivedRequests) {
+                assertEquals(1, receivedRequests.size());
+                assertTrue(receivedRequests.get(0).contains("\"Command\":\"Channel/SetIndex\""));
+                assertTrue(receivedRequests.get(0).contains("\"SelectIndex\":3"));
+            }
         }
     }
 
     @ParameterizedTest
     @EnumSource(PixooModel.class)
     void testSendAnimationTransactionSequence(PixooModel model) {
-        PixooClient client = PixooClient.builder()
-                .ipAddress("127.0.0.1")
-                .model(model)
-                .port(port)
-                .autoSwitchToCustomChannel(true)
-                .build();
+        try (PixooClient client = newClient(model, true)) {
+            byte[] frameBuffer = new byte[12288];
+            PixooFrame frame1 = new PixooFrame(frameBuffer, 100);
+            PixooFrame frame2 = new PixooFrame(frameBuffer, 200);
 
-        byte[] frameBuffer = new byte[12288];
-        PixooFrame frame1 = new PixooFrame(frameBuffer, 100);
-        PixooFrame frame2 = new PixooFrame(frameBuffer, 200);
+            PixooAnimation animation = new PixooAnimation(List.of(frame1, frame2));
 
-        PixooAnimation animation = new PixooAnimation(List.of(frame1, frame2));
+            PixooResponse response = client.sendAnimation(animation);
+            assertTrue(response.isSuccess());
 
-        PixooResponse response = client.sendAnimation(animation);
-        assertTrue(response.isSuccess());
-
-        synchronized (receivedRequests) {
-            // 1. Channel/GetOnOffScreen (from isScreenOn)
-            // 2. Channel/SetIndex (3)
-            // 3. Draw/ResetHttpGifId
-            // 4. Draw/SendHttpGif (frame 0)
-            // 5. Draw/SendHttpGif (frame 1)
-            assertEquals(5, receivedRequests.size());
-            assertTrue(receivedRequests.get(0).contains("Channel/GetOnOffScreen"));
-            assertTrue(receivedRequests.get(1).contains("Channel/SetIndex"));
-            assertTrue(receivedRequests.get(2).contains("Draw/ResetHttpGifId"));
-            assertTrue(receivedRequests.get(3).contains("Draw/SendHttpGif"));
-            assertTrue(receivedRequests.get(3).contains("\"PicNum\":2"));
-            assertTrue(receivedRequests.get(3).contains("\"PicOffset\":0"));
-            assertTrue(receivedRequests.get(4).contains("Draw/SendHttpGif"));
-            assertTrue(receivedRequests.get(4).contains("\"PicNum\":2"));
-            assertTrue(receivedRequests.get(4).contains("\"PicOffset\":1"));
+            synchronized (receivedRequests) {
+                // 1. Channel/GetOnOffScreen (from isScreenOn)
+                // 2. Channel/SetIndex (3)
+                // 3. Draw/ResetHttpGifId
+                // 4. Draw/SendHttpGif (frame 0)
+                // 5. Draw/SendHttpGif (frame 1)
+                assertEquals(5, receivedRequests.size());
+                assertTrue(receivedRequests.get(0).contains("Channel/GetOnOffScreen"));
+                assertTrue(receivedRequests.get(1).contains("Channel/SetIndex"));
+                assertTrue(receivedRequests.get(2).contains("Draw/ResetHttpGifId"));
+                assertTrue(receivedRequests.get(3).contains("Draw/SendHttpGif"));
+                assertTrue(receivedRequests.get(3).contains("\"PicNum\":2"));
+                assertTrue(receivedRequests.get(3).contains("\"PicOffset\":0"));
+                assertTrue(receivedRequests.get(4).contains("Draw/SendHttpGif"));
+                assertTrue(receivedRequests.get(4).contains("\"PicNum\":2"));
+                assertTrue(receivedRequests.get(4).contains("\"PicOffset\":1"));
+            }
         }
     }
 
     @ParameterizedTest
     @EnumSource(PixooModel.class)
     void testHardwareTextOverlay(PixooModel model) {
-        PixooClient client = PixooClient.builder()
-                .ipAddress("127.0.0.1")
-                .model(model)
-                .port(port)
-                .autoSwitchToCustomChannel(false)
-                .build();
+        try (PixooClient client = newClient(model, false)) {
+            PixooText text = PixooText.builder()
+                    .textId(1)
+                    .position(0, 10)
+                    .scrollLeft()
+                    .color("#FF0000")
+                    .text("Hello Pixoo")
+                    .build();
 
-        PixooText text = PixooText.builder()
-                .textId(1)
-                .position(0, 10)
-                .scrollLeft()
-                .color("#FF0000")
-                .text("Hello Pixoo")
-                .build();
+            PixooResponse response = client.sendText(text);
+            assertTrue(response.isSuccess());
 
-        PixooResponse response = client.sendText(text);
-        assertTrue(response.isSuccess());
-
-        synchronized (receivedRequests) {
-            assertEquals(1, receivedRequests.size());
-            assertTrue(receivedRequests.get(0).contains("Draw/SendHttpText"));
-            assertTrue(receivedRequests.get(0).contains("\"TextString\":\"Hello Pixoo\""));
+            synchronized (receivedRequests) {
+                assertEquals(1, receivedRequests.size());
+                assertTrue(receivedRequests.get(0).contains("Draw/SendHttpText"));
+                assertTrue(receivedRequests.get(0).contains("\"TextString\":\"Hello Pixoo\""));
+            }
         }
     }
 
     @ParameterizedTest
     @EnumSource(PixooModel.class)
     void testBuzzerAndBrightness(PixooModel model) {
-        PixooClient client = PixooClient.builder()
-                .ipAddress("127.0.0.1")
-                .model(model)
-                .port(port)
-                .autoSwitchToCustomChannel(false)
-                .build();
+        try (PixooClient client = newClient(model, false)) {
+            client.setBrightness(85);
+            client.playBuzzer(500, 500, 3000);
 
-        client.setBrightness(85);
-        client.playBuzzer(500, 500, 3000);
-
-        synchronized (receivedRequests) {
-            assertEquals(2, receivedRequests.size());
-            assertTrue(receivedRequests.get(0).contains("Channel/SetBrightness"));
-            assertTrue(receivedRequests.get(0).contains("\"Brightness\":85"));
-            assertTrue(receivedRequests.get(1).contains("Device/PlayBuzzer"));
-            assertTrue(receivedRequests.get(1).contains("\"PlayTotalTime\":3000"));
+            synchronized (receivedRequests) {
+                assertEquals(2, receivedRequests.size());
+                assertTrue(receivedRequests.get(0).contains("Channel/SetBrightness"));
+                assertTrue(receivedRequests.get(0).contains("\"Brightness\":85"));
+                assertTrue(receivedRequests.get(1).contains("Device/PlayBuzzer"));
+                assertTrue(receivedRequests.get(1).contains("\"PlayTotalTime\":3000"));
+            }
         }
     }
 
     @ParameterizedTest
     @EnumSource(PixooModel.class)
     void testRotationModeSentCorrectly(PixooModel model) {
-        PixooClient client = PixooClient.builder()
-                .ipAddress("127.0.0.1")
-                .model(model)
-                .port(port)
-                .autoSwitchToCustomChannel(false)
-                .build();
+        try (PixooClient client = newClient(model, false)) {
+            client.setRotation(io.github.glaforge.jixoo.api.PixooRotation.ROTATE_90);
 
-        client.setRotation(io.github.glaforge.jixoo.api.PixooRotation.ROTATE_90);
-
-        synchronized (receivedRequests) {
-            assertEquals(1, receivedRequests.size());
-            assertTrue(receivedRequests.get(0).contains("Device/SetScreenRotationAngle"));
-            assertTrue(receivedRequests.get(0).contains("\"Mode\":1"));
+            synchronized (receivedRequests) {
+                assertEquals(1, receivedRequests.size());
+                assertTrue(receivedRequests.get(0).contains("Device/SetScreenRotationAngle"));
+                assertTrue(receivedRequests.get(0).contains("\"Mode\":1"));
+            }
         }
     }
 
     @ParameterizedTest
     @EnumSource(PixooModel.class)
     void testTimeSyncCommand(PixooModel model) {
-        PixooClient client = PixooClient.builder()
-                .ipAddress("127.0.0.1")
-                .model(model)
-                .port(port)
-                .autoSwitchToCustomChannel(false)
-                .build();
+        try (PixooClient client = newClient(model, false)) {
+            client.syncTime(java.time.Instant.ofEpochSecond(1700000000L));
 
-        client.syncTime(java.time.Instant.ofEpochSecond(1700000000L));
-
-        synchronized (receivedRequests) {
-            assertEquals(1, receivedRequests.size());
-            assertTrue(receivedRequests.get(0).contains("Device/SetUTC"));
-            assertTrue(receivedRequests.get(0).contains("\"Utc\":1700000000"));
+            synchronized (receivedRequests) {
+                assertEquals(1, receivedRequests.size());
+                assertTrue(receivedRequests.get(0).contains("Device/SetUTC"));
+                assertTrue(receivedRequests.get(0).contains("\"Utc\":1700000000"));
+            }
         }
     }
 
     @ParameterizedTest
     @EnumSource(PixooModel.class)
     void testHardwareToolsIntegration(PixooModel model) {
-        PixooClient client = PixooClient.builder()
-                .ipAddress("127.0.0.1")
-                .model(model)
-                .port(port)
-                .autoSwitchToCustomChannel(false)
-                .build();
+        try (PixooClient client = newClient(model, false)) {
+            client.setStopwatch(io.github.glaforge.jixoo.model.tool.StopwatchAction.START);
+            client.setTimer(10, 0, true);
+            client.setScoreboard(14, 10);
+            client.setNoiseStatus(true);
 
-        client.setStopwatch(io.github.glaforge.jixoo.model.tool.StopwatchAction.START);
-        client.setTimer(10, 0, true);
-        client.setScoreboard(14, 10);
-        client.setNoiseStatus(true);
-
-        synchronized (receivedRequests) {
-            assertEquals(4, receivedRequests.size());
-            assertTrue(receivedRequests.get(0).contains("Tools/SetStopWatch"));
-            assertTrue(receivedRequests.get(0).contains("\"Status\":1"));
-            assertTrue(receivedRequests.get(1).contains("Tools/SetTimer"));
-            assertTrue(receivedRequests.get(1).contains("\"Minute\":10"));
-            assertTrue(receivedRequests.get(2).contains("Tools/SetScoreBoard"));
-            assertTrue(receivedRequests.get(2).contains("\"BlueScore\":14"));
-            assertTrue(receivedRequests.get(3).contains("Tools/SetNoiseStatus"));
-            assertTrue(receivedRequests.get(3).contains("\"NoiseStatus\":1"));
+            synchronized (receivedRequests) {
+                assertEquals(4, receivedRequests.size());
+                assertTrue(receivedRequests.get(0).contains("Tools/SetStopWatch"));
+                assertTrue(receivedRequests.get(0).contains("\"Status\":1"));
+                assertTrue(receivedRequests.get(1).contains("Tools/SetTimer"));
+                assertTrue(receivedRequests.get(1).contains("\"Minute\":10"));
+                assertTrue(receivedRequests.get(2).contains("Tools/SetScoreBoard"));
+                assertTrue(receivedRequests.get(2).contains("\"BlueScore\":14"));
+                assertTrue(receivedRequests.get(3).contains("Tools/SetNoiseStatus"));
+                assertTrue(receivedRequests.get(3).contains("\"NoiseStatus\":1"));
+            }
         }
     }
 
@@ -275,59 +249,49 @@ class HttpPixooClientIntegrationTest {
     // Rejected before sending on the Pixoo-64 II: see Pixoo64IIProtocolTest
     @EnumSource(value = PixooModel.class, names = "PIXOO_64")
     void testStartupChannelAndClockSelection(PixooModel model) {
-        PixooClient client = PixooClient.builder()
-                .ipAddress("127.0.0.1")
-                .model(model)
-                .port(port)
-                .autoSwitchToCustomChannel(false)
-                .build();
+        try (PixooClient client = newClient(model, false)) {
+            client.setStartupChannel(io.github.glaforge.jixoo.api.PixooChannel.CUSTOM);
+            client.setClockId(101);
+            client.setCustomPageIndex(2);
 
-        client.setStartupChannel(io.github.glaforge.jixoo.api.PixooChannel.CUSTOM);
-        client.setClockId(101);
-        client.setCustomPageIndex(2);
-
-        synchronized (receivedRequests) {
-            assertEquals(3, receivedRequests.size());
-            assertTrue(receivedRequests.get(0).contains("Channel/SetStartupChannel"));
-            assertTrue(receivedRequests.get(0).contains("\"ChannelIndex\":3"));
-            assertTrue(receivedRequests.get(1).contains("Channel/SetClockSelectId"));
-            assertTrue(receivedRequests.get(1).contains("\"ClockId\":101"));
-            assertTrue(receivedRequests.get(2).contains("Channel/SetCustomPageIndex"));
-            assertTrue(receivedRequests.get(2).contains("\"CustomPageIndex\":2"));
+            synchronized (receivedRequests) {
+                assertEquals(3, receivedRequests.size());
+                assertTrue(receivedRequests.get(0).contains("Channel/SetStartupChannel"));
+                assertTrue(receivedRequests.get(0).contains("\"ChannelIndex\":3"));
+                assertTrue(receivedRequests.get(1).contains("Channel/SetClockSelectId"));
+                assertTrue(receivedRequests.get(1).contains("\"ClockId\":101"));
+                assertTrue(receivedRequests.get(2).contains("Channel/SetCustomPageIndex"));
+                assertTrue(receivedRequests.get(2).contains("\"CustomPageIndex\":2"));
+            }
         }
     }
 
     @ParameterizedTest
     @EnumSource(PixooModel.class)
     void testSendColorVariants(PixooModel model) {
-        PixooClient client = PixooClient.builder()
-                .ipAddress("127.0.0.1")
-                .model(model)
-                .port(port)
-                .autoSwitchToCustomChannel(false)
-                .build();
+        try (PixooClient client = newClient(model, false)) {
+            PixooResponse resp1 = client.sendColor(255, 0, 128);
+            assertTrue(resp1.isSuccess());
 
-        PixooResponse resp1 = client.sendColor(255, 0, 128);
-        assertTrue(resp1.isSuccess());
+            PixooResponse resp2 = client.sendColor("#AABBCC");
+            assertTrue(resp2.isSuccess());
 
-        PixooResponse resp2 = client.sendColor("#AABBCC");
-        assertTrue(resp2.isSuccess());
+            PixooResponse resp3 = client.sendColor("112233");
+            assertTrue(resp3.isSuccess());
 
-        PixooResponse resp3 = client.sendColor("112233");
-        assertTrue(resp3.isSuccess());
+            PixooResponse resp4 = client.sendColor("#F00");
+            assertTrue(resp4.isSuccess());
 
-        PixooResponse resp4 = client.sendColor("#F00");
-        assertTrue(resp4.isSuccess());
+            PixooResponse resp5 = client.sendColor(new java.awt.Color(50, 100, 150));
+            assertTrue(resp5.isSuccess());
 
-        PixooResponse resp5 = client.sendColor(new java.awt.Color(50, 100, 150));
-        assertTrue(resp5.isSuccess());
-
-        synchronized (receivedRequests) {
-            assertEquals(10, receivedRequests.size());
-            long resetCount = receivedRequests.stream().filter(req -> req.contains("Draw/ResetHttpGifId")).count();
-            long sendGifCount = receivedRequests.stream().filter(req -> req.contains("Draw/SendHttpGif")).count();
-            assertEquals(5, resetCount);
-            assertEquals(5, sendGifCount);
+            synchronized (receivedRequests) {
+                assertEquals(10, receivedRequests.size());
+                long resetCount = receivedRequests.stream().filter(req -> req.contains("Draw/ResetHttpGifId")).count();
+                long sendGifCount = receivedRequests.stream().filter(req -> req.contains("Draw/SendHttpGif")).count();
+                assertEquals(5, resetCount);
+                assertEquals(5, sendGifCount);
+            }
         }
     }
 
@@ -349,74 +313,59 @@ class HttpPixooClientIntegrationTest {
     @ParameterizedTest
     @EnumSource(PixooModel.class)
     void testSleepTimer(PixooModel model) {
-        PixooClient client = PixooClient.builder()
-                .ipAddress("127.0.0.1")
-                .model(model)
-                .port(port)
-                .autoSwitchToCustomChannel(false)
-                .build();
+        try (PixooClient client = newClient(model, false)) {
+            PixooResponse setResp = client.setSleepTimer(15);
+            assertTrue(setResp.isSuccess());
 
-        PixooResponse setResp = client.setSleepTimer(15);
-        assertTrue(setResp.isSuccess());
+            int delay = client.getSleepTimer();
+            assertEquals(15, delay);
 
-        int delay = client.getSleepTimer();
-        assertEquals(15, delay);
-
-        synchronized (receivedRequests) {
-            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Device/SetDelayPowerOff") && req.contains("\"DelayPowerOff\":15")));
-            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Device/GetDelayPowerOff")));
+            synchronized (receivedRequests) {
+                assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Device/SetDelayPowerOff") && req.contains("\"DelayPowerOff\":15")));
+                assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Device/GetDelayPowerOff")));
+            }
         }
     }
 
     @ParameterizedTest
     @EnumSource(PixooModel.class)
     void testPomodoro(PixooModel model) {
-        PixooClient client = PixooClient.builder()
-                .ipAddress("127.0.0.1")
-                .model(model)
-                .port(port)
-                .autoSwitchToCustomChannel(false)
-                .build();
+        try (PixooClient client = newClient(model, false)) {
+            PixooResponse setResp = client.setPomodoro(25, 5, 15);
+            assertTrue(setResp.isSuccess());
 
-        PixooResponse setResp = client.setPomodoro(25, 5, 15);
-        assertTrue(setResp.isSuccess());
+            PixooResponse startResp = client.startPomodoro();
+            assertTrue(startResp.isSuccess());
 
-        PixooResponse startResp = client.startPomodoro();
-        assertTrue(startResp.isSuccess());
-
-        synchronized (receivedRequests) {
-            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Tomato/Set") && req.contains("\"WorkTime\":25")));
-            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Tomato/Start") && req.contains("\"TomatoId\":0")));
+            synchronized (receivedRequests) {
+                assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Tomato/Set") && req.contains("\"WorkTime\":25")));
+                assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Tomato/Start") && req.contains("\"TomatoId\":0")));
+            }
         }
     }
 
     @ParameterizedTest
     @EnumSource(PixooModel.class)
     void testAlarmManagement(PixooModel model) {
-        PixooClient client = PixooClient.builder()
-                .ipAddress("127.0.0.1")
-                .model(model)
-                .port(port)
-                .autoSwitchToCustomChannel(false)
-                .build();
+        try (PixooClient client = newClient(model, false)) {
+            PixooAlarm alarm = PixooAlarm.of(1, "Wakeup", 7, 0, List.of(1, 2, 3, 4, 5));
+            PixooResponse setResp = client.setAlarm(alarm);
+            assertTrue(setResp.isSuccess());
 
-        PixooAlarm alarm = PixooAlarm.of(1, "Wakeup", 7, 0, List.of(1, 2, 3, 4, 5));
-        PixooResponse setResp = client.setAlarm(alarm);
-        assertTrue(setResp.isSuccess());
+            List<PixooAlarm> alarms = client.getAlarms();
+            assertEquals(1, alarms.size());
+            assertEquals("Wakeup", alarms.get(0).alarmName());
+            assertEquals(1, alarms.get(0).alarmId());
+            assertTrue(alarms.get(0).isEnabled());
 
-        List<PixooAlarm> alarms = client.getAlarms();
-        assertEquals(1, alarms.size());
-        assertEquals("Wakeup", alarms.get(0).alarmName());
-        assertEquals(1, alarms.get(0).alarmId());
-        assertTrue(alarms.get(0).isEnabled());
+            PixooResponse delResp = client.deleteAlarm(1);
+            assertTrue(delResp.isSuccess());
 
-        PixooResponse delResp = client.deleteAlarm(1);
-        assertTrue(delResp.isSuccess());
-
-        synchronized (receivedRequests) {
-            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Device/SetAlarm") && req.contains("\"AlarmName\":\"Wakeup\"")));
-            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Device/GetAlarm")));
-            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Alarm/Del") && req.contains("\"AlarmId\":1")));
+            synchronized (receivedRequests) {
+                assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Device/SetAlarm") && req.contains("\"AlarmName\":\"Wakeup\"")));
+                assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Device/GetAlarm")));
+                assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Alarm/Del") && req.contains("\"AlarmId\":1")));
+            }
         }
     }
 
@@ -424,22 +373,17 @@ class HttpPixooClientIntegrationTest {
     // Rejected before sending on the Pixoo-64 II: see Pixoo64IIProtocolTest
     @EnumSource(value = PixooModel.class, names = "PIXOO_64")
     void testMemorialManagement(PixooModel model) {
-        PixooClient client = PixooClient.builder()
-                .ipAddress("127.0.0.1")
-                .model(model)
-                .port(port)
-                .autoSwitchToCustomChannel(false)
-                .build();
+        try (PixooClient client = newClient(model, false)) {
+            PixooResponse setResp = client.setMemorial(1, "Birthday", 10, 25, 12, 0);
+            assertTrue(setResp.isSuccess());
 
-        PixooResponse setResp = client.setMemorial(1, "Birthday", 10, 25, 12, 0);
-        assertTrue(setResp.isSuccess());
+            PixooResponse delResp = client.deleteMemorial(1);
+            assertTrue(delResp.isSuccess());
 
-        PixooResponse delResp = client.deleteMemorial(1);
-        assertTrue(delResp.isSuccess());
-
-        synchronized (receivedRequests) {
-            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Memorial/Set") && req.contains("\"MemorialName\":\"Birthday\"") && req.contains("\"MemorialMoon\":10") && req.contains("\"MemorialTime\":720")));
-            assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Memorial/Del") && req.contains("\"MemorialId\":1")));
+            synchronized (receivedRequests) {
+                assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Memorial/Set") && req.contains("\"MemorialName\":\"Birthday\"") && req.contains("\"MemorialMoon\":10") && req.contains("\"MemorialTime\":720")));
+                assertTrue(receivedRequests.stream().anyMatch(req -> req.contains("Memorial/Del") && req.contains("\"MemorialId\":1")));
+            }
         }
     }
 }

@@ -92,6 +92,13 @@ class PixooModelProbeTest {
     }
 
     @Test
+    void ignoresServersReturningNonZeroStatusCode() throws IOException {
+        int port = serve("/post", "{\"error_code\": 401, \"message\": \"Unauthorized\"}");
+
+        assertTrue(PixooModelProbe.detect("127.0.0.1", port, TIMEOUT).isEmpty());
+    }
+
+    @Test
     void findsNothingWhenNoServerListens() throws IOException {
         int port = serve("/post", PIXOO_64_REPLY);
         server.stop(0);

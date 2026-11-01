@@ -59,6 +59,14 @@ class PixooResponseTest {
     }
 
     @Test
+    void missingStatusFieldsFailsClosed() throws Exception {
+        PixooResponse response = parse("{}");
+        assertFalse(response.isSuccess());
+        assertEquals(-1, response.errorCode());
+        assertNotNull(response.errorMessage());
+    }
+
+    @Test
     void modelsExposeTheirEndpoint() {
         assertEquals(80, PixooModel.PIXOO_64.defaultPort());
         assertEquals("/post", PixooModel.PIXOO_64.apiPath());

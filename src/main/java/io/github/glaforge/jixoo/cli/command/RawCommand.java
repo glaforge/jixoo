@@ -105,24 +105,25 @@ public class RawCommand implements Callable<Integer> {
 
             spec.commandLine().getOut().printf("Sending raw JSON payload to %s...%n%s%n", endpoint, formattedJson);
 
-            HttpClient httpClient = HttpClient.newBuilder()
+            try (HttpClient httpClient = HttpClient.newBuilder()
                     .version(HttpClient.Version.HTTP_1_1)
                     .connectTimeout(Duration.ofSeconds(5))
-                    .build();
+                    .build()) {
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(endpoint))
-                    .timeout(Duration.ofSeconds(5))
-                    .header("Content-Type", "application/json; charset=utf-8")
-                    .POST(HttpRequest.BodyPublishers.ofString(formattedJson))
-                    .build();
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(endpoint))
+                        .timeout(Duration.ofSeconds(5))
+                        .header("Content-Type", "application/json; charset=utf-8")
+                        .POST(HttpRequest.BodyPublishers.ofString(formattedJson))
+                        .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-            spec.commandLine().getOut().printf("HTTP Status: %d%n", response.statusCode());
-            spec.commandLine().getOut().printf("Response Body: %s%n", response.body());
+                spec.commandLine().getOut().printf("HTTP Status: %d%n", response.statusCode());
+                spec.commandLine().getOut().printf("Response Body: %s%n", response.body());
 
-            return response.statusCode() == 200 ? 0 : 1;
+                return response.statusCode() == 200 ? 0 : 1;
+            }
 
         } catch (Exception e) {
             spec.commandLine().getErr().printf("Error executing raw JSON command: %s%n", e.getMessage());
