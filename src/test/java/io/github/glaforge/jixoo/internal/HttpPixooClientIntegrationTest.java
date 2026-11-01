@@ -25,6 +25,8 @@ import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,6 +35,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -47,30 +50,44 @@ class HttpPixooClientIntegrationTest {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         port = server.getAddress().getPort();
 
-        server.createContext("/post", new HttpHandler() {
-            @Override
-            public void handle(HttpExchange exchange) throws IOException {
-                InputStream is = exchange.getRequestBody();
-                String body = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-                synchronized (receivedRequests) {
-                    receivedRequests.add(body);
-                }
-
-                String response = "{\"error_code\": 0}";
-                if (body.contains("Device/GetDelayPowerOff")) {
-                    response = "{\"error_code\": 0, \"DelayPowerOff\": 15}";
-                } else if (body.contains("Device/GetAlarm") || body.contains("Alarm/Get")) {
-                    response = "{\"error_code\": 0, \"AlarmList\": [{\"AlarmId\": 1, \"AlarmName\": \"Wakeup\", \"AlarmTime\": 25200, \"EnableFlag\": 1, \"RepeatArray\": [1,2,3,4,5], \"Volume\": 80, \"SoundType\": 1}]}";
-                }
-                exchange.getResponseHeaders().set("Content-Type", "application/json");
-                exchange.sendResponseHeaders(200, response.length());
-                OutputStream os = exchange.getResponseBody();
-                os.write(response.getBytes(StandardCharsets.UTF_8));
-                os.close();
-            }
-        });
+        // Each model is served on its own path, with its own response envelope
+        server.createContext(PixooModel.PIXOO_64.apiPath(), new FakeDeviceHandler(
+                payload -> "{\"error_code\": 0" + payload + "}"));
+        server.createContext(PixooModel.PIXOO_64_II.apiPath(), new FakeDeviceHandler(
+                payload -> "{\"Command\": \"Any\", \"DeviceId\": 123456789, \"PacketFlag\": 1, \"DeviceType\": \"Divoom\","
+                        + " \"ReturnCode\": 0, \"ReturnMessage\": \"\", \"WifiSingal\": 0" + payload + "}"));
 
         server.start();
+    }
+
+    private class FakeDeviceHandler implements HttpHandler {
+        private final Function<String, String> envelope;
+
+        FakeDeviceHandler(Function<String, String> envelope) {
+            this.envelope = envelope;
+        }
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            InputStream is = exchange.getRequestBody();
+            String body = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            synchronized (receivedRequests) {
+                receivedRequests.add(body);
+            }
+
+            String payload = "";
+            if (body.contains("Device/GetDelayPowerOff")) {
+                payload = ", \"DelayPowerOff\": 15";
+            } else if (body.contains("Device/GetAlarm") || body.contains("Alarm/Get")) {
+                payload = ", \"AlarmList\": [{\"AlarmId\": 1, \"AlarmName\": \"Wakeup\", \"AlarmTime\": 25200, \"EnableFlag\": 1, \"RepeatArray\": [1,2,3,4,5], \"Volume\": 80, \"SoundType\": 1}]";
+            }
+            byte[] response = envelope.apply(payload).getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, response.length);
+            OutputStream os = exchange.getResponseBody();
+            os.write(response);
+            os.close();
+        }
     }
 
     @AfterEach
@@ -80,10 +97,12 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @Test
-    void testChannelSelection() {
+    @ParameterizedTest
+    @EnumSource(PixooModel.class)
+    void testChannelSelection(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(false)
                 .build();
@@ -98,10 +117,12 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @Test
-    void testSendAnimationTransactionSequence() {
+    @ParameterizedTest
+    @EnumSource(PixooModel.class)
+    void testSendAnimationTransactionSequence(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(true)
                 .build();
@@ -134,10 +155,12 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @Test
-    void testHardwareTextOverlay() {
+    @ParameterizedTest
+    @EnumSource(PixooModel.class)
+    void testHardwareTextOverlay(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(false)
                 .build();
@@ -160,10 +183,12 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @Test
-    void testBuzzerAndBrightness() {
+    @ParameterizedTest
+    @EnumSource(PixooModel.class)
+    void testBuzzerAndBrightness(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(false)
                 .build();
@@ -180,10 +205,12 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @Test
-    void testRotationModeSentCorrectly() {
+    @ParameterizedTest
+    @EnumSource(PixooModel.class)
+    void testRotationModeSentCorrectly(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(false)
                 .build();
@@ -197,10 +224,12 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @Test
-    void testTimeSyncCommand() {
+    @ParameterizedTest
+    @EnumSource(PixooModel.class)
+    void testTimeSyncCommand(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(false)
                 .build();
@@ -214,10 +243,12 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @Test
-    void testHardwareToolsIntegration() {
+    @ParameterizedTest
+    @EnumSource(PixooModel.class)
+    void testHardwareToolsIntegration(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(false)
                 .build();
@@ -240,10 +271,13 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @Test
-    void testStartupChannelAndClockSelection() {
+    @ParameterizedTest
+    // Rejected before sending on the Pixoo-64 II: see Pixoo64IIProtocolTest
+    @EnumSource(value = PixooModel.class, names = "PIXOO_64")
+    void testStartupChannelAndClockSelection(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(false)
                 .build();
@@ -263,10 +297,12 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @Test
-    void testSendColorVariants() {
+    @ParameterizedTest
+    @EnumSource(PixooModel.class)
+    void testSendColorVariants(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(false)
                 .build();
@@ -310,10 +346,12 @@ class HttpPixooClientIntegrationTest {
         assertThrows(IllegalArgumentException.class, () -> PixooClient.parseHexRgb("#1234"));
     }
 
-    @Test
-    void testSleepTimer() {
+    @ParameterizedTest
+    @EnumSource(PixooModel.class)
+    void testSleepTimer(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(false)
                 .build();
@@ -330,10 +368,12 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @Test
-    void testPomodoro() {
+    @ParameterizedTest
+    @EnumSource(PixooModel.class)
+    void testPomodoro(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(false)
                 .build();
@@ -350,10 +390,12 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @Test
-    void testAlarmManagement() {
+    @ParameterizedTest
+    @EnumSource(PixooModel.class)
+    void testAlarmManagement(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(false)
                 .build();
@@ -378,10 +420,13 @@ class HttpPixooClientIntegrationTest {
         }
     }
 
-    @Test
-    void testMemorialManagement() {
+    @ParameterizedTest
+    // Rejected before sending on the Pixoo-64 II: see Pixoo64IIProtocolTest
+    @EnumSource(value = PixooModel.class, names = "PIXOO_64")
+    void testMemorialManagement(PixooModel model) {
         PixooClient client = PixooClient.builder()
                 .ipAddress("127.0.0.1")
+                .model(model)
                 .port(port)
                 .autoSwitchToCustomChannel(false)
                 .build();

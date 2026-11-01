@@ -3,7 +3,7 @@
 The `pixoo-cli` (or `pixoo-cli.exe` on Windows) is the native CLI to control the Divoom Pixoo 64.
 
 ## Auto-Discover Devices
-Discover Pixoo 64 devices on the local network (useful to find the IP address).
+Discover Pixoo 64 and Pixoo-64 II devices on the local network (useful to find the IP address). The `MODEL` column shows `pixoo64` or `pixoo64-ii`.
 ```bash
 pixoo-cli discover
 ```
@@ -19,6 +19,8 @@ pixoo-cli <subcommand>
 
 Common flags:
 - `-H`, `--host=<host>`: Pixoo 64 IP address or hostname.
+- `--model=<model>`: `auto` (default: probe the device), `pixoo64` or `pixoo64-ii`. Also read from `PIXOO_MODEL`.
+- `-p`, `--port=<port>`: HTTP port (default: 80 for `pixoo64`, 9000 for `pixoo64-ii`).
 - `-v`, `--verbose`: Enable verbose debug logging output.
 - `-h`, `--help`: Show help and usage instructions.
 

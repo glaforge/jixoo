@@ -1,0 +1,193 @@
+{
+  "Channel/GetIndex": {
+    "Command": "Channel/GetIndex",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684836,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0,
+    "SelectIndex": 2
+  },
+  "Channel/GetClockInfo": {
+    "Command": "Channel/GetClockInfo",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684840,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0,
+    "Brightness": 100,
+    "ClockId": 10
+  },
+  "Channel/GetOnOffScreen": {
+    "Command": "Channel/GetOnOffScreen",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684842,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0,
+    "OnOff": 1
+  },
+  "Channel/GetConfig": {
+    "Command": "Channel/GetConfig",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684838,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0,
+    "RotationFlag": 0,
+    "ClockTime": 60,
+    "GalleryTime": 60,
+    "SingleGalleyTime": -1,
+    "ChannelIndex": 1,
+    "StartUpClockId": 908930411,
+    "GalleryShowTimeFlag": 0
+  },
+  "Channel/GetCustomPageIndex": {
+    "Command": "Channel/GetCustomPageIndex",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684844,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0,
+    "CustomPageIndex": 0
+  },
+  "Tools/GetTimer": {
+    "Command": "Tools/GetTimer",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684848,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0,
+    "Second": 0,
+    "Minute": 1,
+    "Status": 0
+  },
+  "Tools/GetStopWatch": {
+    "Command": "Tools/GetStopWatch",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684846,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0,
+    "Status": 2
+  },
+  "Tools/GetScoreBoard": {
+    "Command": "Tools/GetScoreBoard",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684850,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0,
+    "BlueScore": 0,
+    "RedScore": 0
+  },
+  "Tools/GetNoiseStatus": {
+    "Command": "Tools/GetNoiseStatus",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684852,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0,
+    "NoiseStatus": 2
+  },
+  "Sys/GetConf": {
+    "Command": "Sys/GetConf",
+    "DeviceId": 123456789,
+    "PacketFlag": 1792940840,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0
+  },
+  "Channel/GetStartupChannel": {
+    "Command": "Channel/GetStartupChannel",
+    "DeviceId": 123456789,
+    "PacketFlag": 1792940849,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0
+  },
+  "Device/GetAlarm": {
+    "Command": "Device/GetAlarm",
+    "DeviceId": 123456789,
+    "PacketFlag": 1792940976,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0
+  },
+  "Channel/SetBrightness": {
+    "Command": "Channel/SetBrightness",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684855,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0
+  },
+  "Draw/ResetHttpGifId": {
+    "Command": "Draw/ResetHttpGifId",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684887,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0
+  },
+  "Draw/SendHttpGif": {
+    "Command": "Draw/SendHttpGif",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684888,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0
+  },
+  "Channel/SetIndex": {
+    "Command": "Channel/SetIndex",
+    "DeviceId": 123456789,
+    "PacketFlag": 946684860,
+    "DeviceType": "Divoom",
+    "ReturnCode": 0,
+    "ReturnMessage": "",
+    "WifiSingal": 0
+  },
+  "Sys/DevUpdateConf": {
+    "ReturnCode": 1,
+    "ReturnMessage": "Only accept JSON parameters"
+  },
+  "Device/SetDelayPowerOff": {
+    "ReturnCode": 1,
+    "ReturnMessage": "Only accept JSON parameters"
+  },
+  "Device/GetStorageStatus": {
+    "ReturnCode": 1,
+    "ReturnMessage": "Only accept JSON parameters"
+  },
+  "Tomato/Set": {
+    "ReturnCode": 1,
+    "ReturnMessage": "Only accept JSON parameters"
+  },
+  "Tomato/Start": {
+    "ReturnCode": 1,
+    "ReturnMessage": "Only accept JSON parameters"
+  },
+  "Memorial/Set": {
+    "ReturnCode": 1,
+    "ReturnMessage": "Only accept JSON parameters"
+  },
+  "Device/GetDelayPowerOff": {
+    "ReturnCode": 1,
+    "ReturnMessage": "Only accept JSON parameters"
+  }
+}

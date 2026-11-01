@@ -17,6 +17,7 @@ package io.github.glaforge.jixoo.cli;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import io.github.glaforge.jixoo.api.PixooModel;
 import picocli.CommandLine;
 
 import java.io.PrintWriter;
@@ -63,7 +64,7 @@ class PixooCliTest {
         int exitCode = cmd.execute("discover", "--help");
         assertEquals(0, exitCode);
         String output = out.toString();
-        assertTrue(output.contains("Discover Pixoo 64 devices"));
+        assertTrue(output.contains("Discover Pixoo 64 and Pixoo-64 II devices"));
         assertTrue(output.contains("--timeout"));
     }
 
@@ -505,6 +506,44 @@ class PixooCliTest {
         assertTrue(output.contains("current"));
         assertTrue(output.contains("forecast"));
     }
+
+    @Test
+    @DisplayName("--model accepts auto, pixoo64 and pixoo64-ii in any case or separator style")
+    void testParseModel() {
+        assertNull(PixooCli.parseModel("auto"));
+        assertNull(PixooCli.parseModel(null));
+        assertEquals(PixooModel.PIXOO_64, PixooCli.parseModel("pixoo64"));
+        assertEquals(PixooModel.PIXOO_64_II, PixooCli.parseModel("pixoo64-ii"));
+        assertEquals(PixooModel.PIXOO_64_II, PixooCli.parseModel("PIXOO_64_II"));
+        assertThrows(IllegalArgumentException.class, () -> PixooCli.parseModel("timebox"));
+    }
+
+    @Test
+    @DisplayName("An explicit model sets the API endpoint and default port without probing the device")
+    void testApiEndpointWithExplicitModel() {
+        PixooCli cli = new PixooCli();
+        new CommandLine(cli).parseArgs("--model", "pixoo64-ii", "-H", "192.168.1.50");
+        assertEquals("http://192.168.1.50:9000/divoom_api", cli.apiEndpoint());
+
+        cli = new PixooCli();
+        new CommandLine(cli).parseArgs("--model", "pixoo64", "-H", "192.168.1.50");
+        assertEquals("http://192.168.1.50:80/post", cli.apiEndpoint());
+
+        cli = new PixooCli();
+        new CommandLine(cli).parseArgs("--model", "pixoo64-ii", "--port", "9100", "-H", "192.168.1.50");
+        assertEquals("http://192.168.1.50:9100/divoom_api", cli.apiEndpoint());
+    }
+
+    @Test
+    @DisplayName("An unknown model name fails with a one-line error, without a stack trace")
+    void testUnknownModelFails() {
+        CommandLine cmd = PixooCli.commandLine();
+        StringWriter err = new StringWriter();
+        cmd.setErr(new PrintWriter(err));
+
+        int exitCode = cmd.execute("--model", "timebox", "-H", "192.168.1.50", "brightness", "50");
+
+        assertEquals(1, exitCode);
+        assertEquals("Error: Unknown device model: timebox (expected auto, pixoo64 or pixoo64-ii)", err.toString().trim());
+    }
 }
-
-

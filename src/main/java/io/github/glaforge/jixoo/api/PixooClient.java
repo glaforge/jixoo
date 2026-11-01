@@ -62,6 +62,7 @@ public interface PixooClient extends AutoCloseable {
 
     /**
      * Creates a client connected to the given IP address with default settings.
+     * The device model is detected on the first command.
      *
      * @param ipAddress the IP address of the Pixoo64 device
      * @return a new instance of PixooClient
@@ -77,6 +78,16 @@ public interface PixooClient extends AutoCloseable {
      */
     static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * Gets the device model this client talks to. A client built without an explicit model
+     * detects it on first use, so this may send a probe request to the device.
+     *
+     * @return the device model
+     */
+    default PixooModel model() {
+        return PixooModel.PIXOO_64;
     }
 
     /**
@@ -664,6 +675,9 @@ public interface PixooClient extends AutoCloseable {
      * Because the ESP32 has limited memory and a minimal TLS stack, high-resolution GIFs (such as &gt;64x64)
      * or complex HTTPS endpoints will cause the device to crash and reboot.
      * For reliable playback, prefer {@link #sendGif(URI)} or {@link #sendGifUrl(String)}.
+     * <p>
+     * The Pixoo-64 II downloads the URL but never displays it: on that model, the GIF is
+     * downloaded and streamed by {@link #sendGifUrl(String)} instead.
      *
      * @param gifUrl the HTTP/HTTPS URL of the GIF
      * @return the device's response
@@ -723,6 +737,7 @@ public interface PixooClient extends AutoCloseable {
      * Checks if the screen matrix is currently turned on.
      *
      * @return true if the screen is on, false if off / in standby
+     * @throws io.github.glaforge.jixoo.api.exception.PixooException if the device cannot be reached
      */
     boolean isScreenOn();
 
@@ -999,7 +1014,8 @@ public interface PixooClient extends AutoCloseable {
      */
     class Builder {
         private String ipAddress;
-        private int port = 80;
+        private PixooModel model;
+        private Integer port;
         private Duration connectTimeout = Duration.ofSeconds(5);
         private Duration requestTimeout = Duration.ofSeconds(5);
         private boolean autoSwitchToCustomChannel = false;
@@ -1019,7 +1035,20 @@ public interface PixooClient extends AutoCloseable {
         }
 
         /**
-         * Sets the target device port (default is 80).
+         * Sets the target device model, which selects the API path, the response envelope and the
+         * default port. When no model is set (or {@code null}), the client detects it on its first
+         * command by probing the device.
+         *
+         * @param model the device model
+         * @return this Builder
+         */
+        public Builder model(PixooModel model) {
+            this.model = model;
+            return this;
+        }
+
+        /**
+         * Sets the target device port (default is the model's port: 80 for the Pixoo 64, 9000 for the Pixoo-64 II).
          *
          * @param port the HTTP port
          * @return this Builder
@@ -1071,7 +1100,11 @@ public interface PixooClient extends AutoCloseable {
             if (ipAddress == null || ipAddress.isBlank()) {
                 throw new IllegalArgumentException("IP address must be specified");
             }
-            return new HttpPixooClient(ipAddress, port, connectTimeout, requestTimeout, autoSwitchToCustomChannel);
+            if (model == null) {
+                return HttpPixooClient.detecting(ipAddress, port, connectTimeout, requestTimeout, autoSwitchToCustomChannel);
+            }
+            int targetPort = port != null ? port : model.defaultPort();
+            return new HttpPixooClient(model, ipAddress, targetPort, connectTimeout, requestTimeout, autoSwitchToCustomChannel);
         }
     }
 }

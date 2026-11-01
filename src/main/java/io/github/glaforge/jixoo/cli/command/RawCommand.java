@@ -101,8 +101,7 @@ public class RawCommand implements Callable<Integer> {
                 return 1;
             }
 
-            int port = parent.getPort();
-            String endpoint = "http://" + host + ":" + port + "/post";
+            String endpoint = parent.apiEndpoint();
 
             spec.commandLine().getOut().printf("Sending raw JSON payload to %s...%n%s%n", endpoint, formattedJson);
 

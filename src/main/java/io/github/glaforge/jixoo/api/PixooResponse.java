@@ -23,6 +23,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Standard response returned by the Pixoo64 REST API.
  * Handles both standard numeric status codes (0 = success) and string error messages
  * occasionally returned by device firmware when requests are invalid or unsupported.
+ * <p>
+ * Both response envelopes are supported: {@code error_code} / {@code error_message}
+ * (Pixoo 64) and {@code ReturnCode} / {@code ReturnMessage} (Pixoo-64 II, which sends an
+ * empty {@code ReturnMessage} on success).
  *
  * @param errorCode    Status code returned by the device (0 indicates success).
  * @param errorMessage Optional error description or error message string.
@@ -39,10 +43,18 @@ public record PixooResponse(
     @JsonCreator
     public static PixooResponse fromJson(
             @JsonProperty("error_code") Object errorCodeObj,
-            @JsonProperty("error_message") String errorMsg
+            @JsonProperty("error_message") String errorMsg,
+            @JsonProperty("ReturnCode") Object returnCodeObj,
+            @JsonProperty("ReturnMessage") String returnMsg
     ) {
+        return errorCodeObj == null && returnCodeObj != null
+                ? fromJson(returnCodeObj, returnMsg)
+                : fromJson(errorCodeObj, errorMsg);
+    }
+
+    public static PixooResponse fromJson(Object errorCodeObj, String errorMsg) {
         int code = 0;
-        String msg = errorMsg;
+        String msg = errorMsg == null || errorMsg.isBlank() ? null : errorMsg;
         if (errorCodeObj instanceof Number n) {
             code = n.intValue();
         } else if (errorCodeObj != null) {

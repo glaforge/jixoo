@@ -45,6 +45,7 @@ The Divoom Pixoo-64 is a physical **64×64 RGB LED matrix** (4,096 individual SM
 ### 3.1 The 32-Frame Pixoo-64 Hardware Ceiling
 - The Pixoo-64 `Draw/SendHttpGif` buffer reliably plays **30–32 frames maximum** before looping early or dropping frames.
 - **Rule**: Keep all custom animated GIFs between **4 and 28 frames** (`8–16` frames is the sweet spot).
+- **Pixoo-64 II**: 32-frame animations loop correctly, but each frame takes **~1.5 s to upload** (a 32-frame animation takes ~50 s before it starts). Fewer frames mean a much faster display.
 
 ### 3.2 Frame Delay Rhythm (8–12 FPS + Keyframe Holds)
 - Ultra-high frame rates (`> 20 FPS`) on a 64×64 grid cause sub-pixel crawl and require too many frames.

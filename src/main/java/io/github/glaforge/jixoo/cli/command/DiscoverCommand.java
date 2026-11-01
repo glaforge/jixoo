@@ -15,6 +15,7 @@
  */
 package io.github.glaforge.jixoo.cli.command;
 
+import io.github.glaforge.jixoo.api.PixooModel;
 import io.github.glaforge.jixoo.discovery.PixooDevice;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
@@ -30,7 +31,7 @@ import java.util.concurrent.Callable;
  */
 @Command(
         name = "discover",
-        description = "Discover Pixoo 64 devices on the local network using UDP broadcast and local network HTTP probing."
+        description = "Discover Pixoo 64 and Pixoo-64 II devices on the local network using UDP broadcast and local network HTTP probing."
 )
 public class DiscoverCommand implements Callable<Integer> {
 
@@ -49,7 +50,7 @@ public class DiscoverCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        spec.commandLine().getOut().printf("Searching for Pixoo 64 devices on local network (%d seconds)...%n", timeoutSeconds);
+        spec.commandLine().getOut().printf("Searching for Pixoo 64 / Pixoo-64 II devices on local network (%d seconds)...%n", timeoutSeconds);
         List<PixooDevice> devices = PixooDevice.discoverDevices(Duration.ofSeconds(timeoutSeconds));
 
         if (devices.isEmpty()) {
@@ -58,15 +59,20 @@ public class DiscoverCommand implements Callable<Integer> {
         }
 
         spec.commandLine().getOut().printf("Found %d device(s):%n%n", devices.size());
-        spec.commandLine().getOut().printf("%-18s %-20s %-16s %s%n", "IP ADDRESS", "MAC ADDRESS", "NAME", "DEVICE ID");
-        spec.commandLine().getOut().println("------------------------------------------------------------------");
+        spec.commandLine().getOut().printf("%-18s %-20s %-16s %-12s %s%n", "IP ADDRESS", "MAC ADDRESS", "NAME", "MODEL", "DEVICE ID");
+        spec.commandLine().getOut().println("-------------------------------------------------------------------------------");
         for (PixooDevice device : devices) {
-            spec.commandLine().getOut().printf("%-18s %-20s %-16s %d%n",
+            spec.commandLine().getOut().printf("%-18s %-20s %-16s %-12s %d%n",
                     device.ipAddress(),
                     device.macAddress().isEmpty() ? "N/A" : device.macAddress(),
                     device.deviceName(),
+                    modelName(device.model()),
                     device.deviceId());
         }
         return 0;
+    }
+
+    private static String modelName(PixooModel model) {
+        return model == PixooModel.PIXOO_64_II ? "pixoo64-ii" : "pixoo64";
     }
 }

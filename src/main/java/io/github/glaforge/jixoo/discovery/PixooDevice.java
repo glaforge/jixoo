@@ -17,6 +17,7 @@ package io.github.glaforge.jixoo.discovery;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.glaforge.jixoo.api.PixooModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,10 +29,7 @@ import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketTimeoutException;
-import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -56,15 +54,35 @@ import java.util.regex.Pattern;
  * @param macAddress The MAC address of the device
  * @param deviceName The name of the device
  * @param deviceId   The numeric ID of the device
+ * @param model      The device model, which tells how to reach its API
  */
 public record PixooDevice(
         String ipAddress,
         String macAddress,
         String deviceName,
-        int deviceId
+        int deviceId,
+        PixooModel model
 ) {
     private static final Logger log = LoggerFactory.getLogger(PixooDevice.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    // Endpoints tried on each candidate address: the Pixoo 64 API (port 80, sometimes 8080) and the Pixoo-64 II API
+    private static final List<PixooModelProbe.Endpoint> PROBE_ENDPOINTS = List.of(
+            new PixooModelProbe.Endpoint(PixooModel.PIXOO_64, 80),
+            new PixooModelProbe.Endpoint(PixooModel.PIXOO_64, 8080),
+            new PixooModelProbe.Endpoint(PixooModel.PIXOO_64_II, PixooModel.PIXOO_64_II.defaultPort()));
+    private static final Duration PROBE_TIMEOUT = Duration.ofMillis(1000);
+
+    /**
+     * Creates a discovered original Pixoo 64.
+     *
+     * @param ipAddress  The IP address of the device
+     * @param macAddress The MAC address of the device
+     * @param deviceName The name of the device
+     * @param deviceId   The numeric ID of the device
+     */
+    public PixooDevice(String ipAddress, String macAddress, String deviceName, int deviceId) {
+        this(ipAddress, macAddress, deviceName, deviceId, PixooModel.PIXOO_64);
+    }
 
     /**
      * Discover Pixoo devices on the local network using multi-strategy discovery:
@@ -266,33 +284,21 @@ public record PixooDevice(
         return found;
     }
 
-    private static final HttpClient PROBE_CLIENT = HttpClient.newBuilder()
-            .version(HttpClient.Version.HTTP_1_1)
-            .connectTimeout(Duration.ofMillis(800))
-            .build();
+    private static final HttpClient PROBE_CLIENT = PixooModelProbe.newClient(Duration.ofMillis(800));
 
     private static PixooDevice probePixooHttp(String ip, String macAddress) {
-        int[] ports = {80, 8080};
+        return probeDevice(PROBE_CLIENT, ip, macAddress, PROBE_ENDPOINTS);
+    }
 
-        for (int port : ports) {
-            try {
-                String uriStr = "http://" + ip + (port != 80 ? ":" + port : "") + "/post";
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(uriStr))
-                        .timeout(Duration.ofMillis(1000))
-                        .header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofString("{\"Command\": \"Channel/GetIndex\"}"))
-                        .build();
-
-                HttpResponse<String> response = PROBE_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() == 200 && response.body() != null && response.body().contains("\"error_code\": 0")) {
-                    return new PixooDevice(ip, macAddress != null ? macAddress : "", "Pixoo64", 0);
-                }
-            } catch (Exception e) {
-                log.debug("HTTP probe failed for {}:{}", ip, port, e);
-            }
-        }
-        return null;
+    static PixooDevice probeDevice(HttpClient client, String ip, String macAddress, List<PixooModelProbe.Endpoint> endpoints) {
+        return PixooModelProbe.detect(client, ip, endpoints, PROBE_TIMEOUT)
+                .map(detection -> new PixooDevice(
+                        ip,
+                        macAddress != null ? macAddress : "",
+                        detection.model() == PixooModel.PIXOO_64_II ? "Pixoo-64 II" : "Pixoo64",
+                        detection.reply().path("DeviceId").asInt(0),
+                        detection.model()))
+                .orElse(null);
     }
 
     private static List<String> getLocalSubnetIps() {

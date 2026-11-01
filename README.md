@@ -1,6 +1,6 @@
 # jixoo64 🖼️✨
 
-Modern Java 21 client library and native CLI for the **Divoom Pixoo 64** 64x64 RGB LED matrix display.
+Modern Java 21 client library and native CLI for the **Divoom Pixoo 64** and **Pixoo-64 II** 64x64 RGB LED matrix displays.
 
 ---
 
@@ -9,7 +9,7 @@ Modern Java 21 client library and native CLI for the **Divoom Pixoo 64** 64x64 R
 - ☕ **Modern Java 21 API**: Built with Java 21 records, sealed interfaces, and native `HttpClient` enforcing HTTP/1.1 protocol rules required by the Pixoo 64 ESP32 web server.
 - 🚀 **Picocli Command-Line Interface (`pixoo-cli`)**: Full-featured terminal application with fast command execution.
 - ⚡ **GraalVM 25 Native Image Support**: Instantaneous (<5ms startup) native executable support (`mvn package -Pnative`).
-- 🔍 **Subnet Device Discovery**: Auto-discover active Pixoo 64 devices on your local network using UDP broadcast and ARP scanning.
+- 🔍 **Subnet Device Discovery**: Auto-discover active Pixoo 64 and Pixoo-64 II devices on your local network using UDP broadcast and ARP scanning, with automatic model detection.
 - 🖼️ **Image & Animated GIF Processing**: Load PNG, JPG, BMP, or animated GIF files from disk or stream remote GIF URLs directly. Includes smart aspect-ratio preserving scaling and letterboxing for 64x64 matrix pixels.
 - 🧩 **Pure Java 21 Divoom Asset & Animated GIF Codec**: Decode native 16x16 tiled Divoom binary assets (`.bin`, formats 26/18) and encode multi-frame animated GIF89a files with zero external C/LZO libraries!
 
@@ -23,6 +23,15 @@ Modern Java 21 client library and native CLI for the **Divoom Pixoo 64** 64x64 R
 - ⚙️ **System Configuration Management**: Configure 12/24-hour time format, Celsius/Fahrenheit units, date formatting, display mirroring, auto-sleep timers, and startup channels.
 - ☁️ **Divoom Cloud & Persistent Custom Channels**: Direct integration with Divoom Cloud API for persistent flash playlist storage and gallery publishing.
 - 🎛️ **Full Device Control**: Channel switching, LED matrix brightness, screen power toggle and status query, rotation angle modes, buzzer alarm tone patterns, and raw JSON execution.
+
+### Supported Devices
+
+| Device | Local API | Notes |
+|---|---|---|
+| Pixoo 64 | `http://<ip>:80/post` | All features |
+| Pixoo-64 II | `http://<ip>:9000/divoom_api` | Display, images, animations, text, rotation, buzzer, time, clock faces, custom pages and tools work. System settings (`config set`), sleep timer, storage status, startup channel, Pomodoro and countdowns are not supported by the device and throw `UnsupportedCommandException`. Remote GIF URLs are streamed by the client. Each animation frame takes ~1.5 s to upload. |
+
+The full compatibility matrix is in [SPECIFICATION.md §10](SPECIFICATION.md).
 
 ---
 
@@ -71,6 +80,12 @@ Set your target Pixoo 64 device IP address via command-line option `-H` / `--hos
 
 ```bash
 export PIXOO_HOST="192.168.1.100"
+```
+
+The device model is detected automatically: the CLI probes the Pixoo 64 API (`:80/post`), then the Pixoo-64 II API (`:9000/divoom_api`). To skip detection, set it with `--model pixoo64|pixoo64-ii` (or the `PIXOO_MODEL` environment variable). `-p` / `--port` overrides the model's default port.
+
+```bash
+pixoo-cli --model pixoo64-ii -H 192.168.1.70 brightness 50
 ```
 
 ### Subcommands Reference
@@ -288,7 +303,7 @@ import java.nio.file.Path;
 
 public class PixooExample {
     public static void main(String[] args) {
-        // Connect to Pixoo 64 device
+        // Connect to a Pixoo 64 or Pixoo-64 II (the model is detected on the first command)
         try (PixooClient client = PixooClient.create("192.168.1.100")) {
             
             // 1. Sync real-time clock
@@ -346,9 +361,22 @@ import java.util.List;
 
 List<PixooDevice> devices = PixooDevice.discoverDevices(Duration.ofSeconds(3));
 for (PixooDevice device : devices) {
-    System.out.println("Discovered: " + device.deviceName() + " at " + device.ipAddress());
+    System.out.println("Discovered: " + device.deviceName() + " (" + device.model() + ") at " + device.ipAddress());
 }
 ```
+
+### Choosing the Device Model
+
+`PixooClient.create(ip)` and a builder without a model detect the model on the first command. Set it explicitly to skip the probe:
+
+```java
+PixooClient client = PixooClient.builder()
+        .ipAddress("192.168.1.70")
+        .model(PixooModel.PIXOO_64_II) // port 9000, /divoom_api
+        .build();
+```
+
+Commands the device does not support (see [SPECIFICATION.md §10](SPECIFICATION.md)) throw `UnsupportedCommandException`.
 
 ---
 
